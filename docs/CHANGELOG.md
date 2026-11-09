@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-09
 
 ### Added
+- **Render Infrastructure as Code (render.yaml Blueprint)**:
+  - Added [`render.yaml`](file:///y:/roxstar/sts_lab/render.yaml) defining both backend web service (`roxstar-backend`) and static frontend site (`roxstar-frontend`).
+  - Added [`setup.py`](file:///y:/roxstar/sts_lab/setup.py) to support `pip install -e .` on Render and standard Python environments.
+  - Added in-memory package aliasing in [`run_sts.py`](file:///y:/roxstar/sts_lab/run_sts.py) to guarantee `import sts_lab.xxx` resolution across all cloud hosting paths.
+  - Added support for `VITE_TOKEN_URL` in [`web/src/services/tokenService.ts`](file:///y:/roxstar/sts_lab/web/src/services/tokenService.ts).
 - **Production Containerization & Koyeb Deployment Architecture**:
   - Created multi-stage [`Dockerfile`](file:///y:/roxstar/sts_lab/Dockerfile) bundling React 19 + Vite frontend build with Python 3.11 STS backend worker & token server.
   - Added [`.dockerignore`](file:///y:/roxstar/sts_lab/.dockerignore) to prevent copying local virtualenvs, node_modules, and git history into container builds.

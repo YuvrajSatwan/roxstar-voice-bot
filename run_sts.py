@@ -19,6 +19,15 @@ for _p in (str(_parent_dir), str(_current_dir)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+try:
+    import sts_lab
+except ImportError:
+    import types
+    _pkg = types.ModuleType("sts_lab")
+    _pkg.__path__ = [str(_current_dir)]
+    _pkg.__file__ = str(_current_dir / "__init__.py")
+    sys.modules["sts_lab"] = _pkg
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):

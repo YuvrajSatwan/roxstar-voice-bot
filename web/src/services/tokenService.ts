@@ -5,6 +5,7 @@
 
 const STS_TOKEN_URL =
   import.meta.env.VITE_STS_TOKEN_URL ||
+  import.meta.env.VITE_TOKEN_URL ||
   (typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
   window.location.port !== '8001'

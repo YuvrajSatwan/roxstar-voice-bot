@@ -50,6 +50,7 @@ def main() -> None:
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
+    env["GOOGLE_GENAI_API_VERSION"] = "v1beta"
     existing_pythonpath = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = f"{str(_parent_dir)}{os.pathsep}{str(_current_dir)}{os.pathsep}{existing_pythonpath}".rstrip(os.pathsep)
 

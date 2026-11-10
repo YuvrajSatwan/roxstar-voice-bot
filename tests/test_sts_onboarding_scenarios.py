@@ -20,6 +20,7 @@ Scenarios covered:
 17. User enters Phase 2 -> opening question asks 'sunte ho ya gaate ho', adapts to listener vs singer, and verifies Phase 2 prompt rules.
 18. User tells name -> Simran addresses user directly by first name without stiff formal 'ji' (no 'Yuvi ji' or 'Rahul ji').
 19. Strict single-turn enforcement -> no runaway turns, mandatory pauses between Phase 3 & 4, and no thinking fillers.
+20. First interaction sensible intro (no other rooms question) & comprehensive silent capture of user fields.
 """
 
 from __future__ import annotations
@@ -398,9 +399,10 @@ def test_scenario_17_phase_2_sunte_ho_ya_gaate_ho_adaptive_branching() -> None:
     assert "Aap purely bathroom singer ho ya doston ke saamne bhi mic pakad lete ho?" in prompt
     assert "PATH C — CLEAR USER REFUSAL / NO INTEREST" in prompt
 
-    # 3. Verify Phase 3 does not duplicate the listener vs singer check
+    # 3. Verify Phase 3 does not ask if user saw other rooms or duplicate listener check
     assert "Toh yahan sirf sunne aaye ho ya khud bhi gaoge?" not in prompt
-    assert "Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?" in prompt
+    assert "Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?" not in prompt
+    assert "Aap yahan bas chill karke gaane sunne aaye ho ya khud bhi try karne?" in prompt
     assert "50 welcome coins unlock karwaye hain" in prompt
 
     # 4. Functional tracker flow for a listener:
@@ -452,6 +454,59 @@ def test_scenario_19_strict_single_turn_and_no_unprompted_speech() -> None:
     assert "CRITICAL MANDATORY PAUSE: STOP HERE COMPLETELY. DO NOT SHARE THE COINS TIP YET" in prompt
     assert "CRITICAL MANDATORY PAUSE: STOP HERE COMPLETELY. DO NOT PITCH DUETS YET" in prompt
     assert "CRITICAL: STOP IMMEDIATELY AND WAIT FOR USER DECISION! DO NOT SPEAK AGAIN" in prompt
+
+
+def test_scenario_20_comprehensive_input_fields_capture_and_first_interaction_sensible_intro() -> None:
+    """20. First interaction sensible intro & comprehensive silent capture of user fields."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    # 1. Verify sensible Phase 3 intro: no illogical 'did you see other rooms first' question
+    assert "NEVER ask if they saw other rooms before this" in prompt
+    assert "Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?" not in prompt
+    assert "Aap yahan bas chill karke gaane sunne aaye ho ya khud bhi try karne?" in prompt
+
+    # 2. Verify all newly analyzed fields are documented in prompt DATA CAPTURE
+    for field_name in ["referral_source", "musical_role", "singing_comfort", "favorite_song"]:
+        assert field_name in prompt
+
+    # 3. Test functional capture of all analyzed fields
+    profile = UserDiscoveryProfile(user_id="user_full_flow")
+    tracker = OnboardingTracker(profile=profile)
+
+    assert tracker.save_field("name", "Yuvi")
+    assert tracker.save_field("occupation", "Product Manager")
+    assert tracker.save_field("referral_source", "Instagram reel")
+    assert tracker.save_field("musical_role", "singer")
+    assert tracker.save_field("singing_comfort", "bathroom_singer")
+    assert tracker.save_field("music_taste", "Arijit Singh")
+    assert tracker.save_field("favorite_song", "Kesariya")
+    assert tracker.save_field("expectations", "chill karke live jam sunna")
+
+    # Verify fields stored in profile correctly
+    assert tracker.profile.name == "Yuvi"
+    assert tracker.profile.occupation == "Product Manager"
+    assert tracker.profile.referral_source == "Instagram reel"
+    assert tracker.profile.musical_role == "singer"
+    assert tracker.profile.singing_comfort == "bathroom_singer"
+    assert tracker.profile.favorite_song == "Kesariya"
+    assert tracker.profile.expectations == "chill karke live jam sunna"
+    assert "Arijit Singh" in tracker.profile.music_taste
+
+    # Verify summary context reflects the discovered fields
+    summary = tracker.get_summary_context()
+    assert "Musical Role: singer" in summary
+    assert "Singing Comfort: bathroom_singer" in summary
+    assert "Favorite/Loop Song: Kesariya" in summary
+    assert "Found Roxstar Via: Instagram reel" in summary
+
+    # 4. If user does NOT provide a field, it simply remains None without failure ("let it be")
+    profile_lean = UserDiscoveryProfile(user_id="user_lean")
+    tracker_lean = OnboardingTracker(profile=profile_lean)
+    tracker_lean.save_field("name", "Aman")
+    assert tracker_lean.profile.favorite_song is None
+    assert tracker_lean.profile.musical_role is None
+    assert "Name: Aman" in tracker_lean.get_summary_context()
+
 
 
 

@@ -8,7 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-10
 
-### Fixed
+### Added
+- **Phase 3 First-Interaction Alignment & Comprehensive Field Capture**:
+  - Replaced illogical Phase 3 question (*"Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?"*) with an authentic first-time app introduction (*"Waise Roxstar pe log bina kisi judgment ke 24/7 live jam karte hain aur duets gaate hain. Aap yahan bas chill karke gaane sunne aaye ho ya khud bhi try karne?"*), recognizing that upon fresh app download, the call with Simran is the user's very first interaction.
+  - Analyzed all conversational questions asked by Simran and expanded the user discovery engine with 4 useful profile fields:
+    - `referral_source`: Discovers how the user found Roxstar (friend recommendation, Instagram reel, ad, Play Store).
+    - `musical_role`: Discovers whether they are primarily a listener, singer, hummer, or both.
+    - `singing_comfort`: Discovers comfort level (bathroom singer, sings with friends, performer, shy).
+    - `favorite_song`: Discovers loop song or favorite track on repeat (e.g. "Kesariya", "Tum Hi Ho").
+  - Configured silent background capture: if the user answers, save field silently; if they skip, decline, or don't mention something, simply let it be without interrogation or re-asking.
+  - Added automated scenario test `test_scenario_20_comprehensive_input_fields_capture_and_first_interaction_sensible_intro` (31/31 pytest tests passing).
 - **Multi-Turn Runaway Speech & Speaking Without User Input**:
   - Identified root causes of Simran speaking back-to-back turns without waiting for user input:
     1. `save_profile` was returning `'{"status": "saved"}'` with default blocking tool behavior, which caused LiveKit to request a model reply (`reply_required=True`), prompting Gemini to generate unprompted filler turns like `"Hmm... ruko, soch rahi hoon."`.

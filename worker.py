@@ -131,7 +131,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Tools definition for Simran
     @llm.function_tool(
-        description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, expectations, duet_attempted, coins_explained). Runs silently in the background and requires no spoken answer."
+        description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, favorite_song, musical_role, singing_comfort, referral_source, expectations, duet_attempted, coins_explained). Runs silently in the background and requires no spoken answer."
     )
     async def save_profile(field: str, value: str) -> None:
         clean_val = value.strip().lower()

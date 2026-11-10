@@ -28,13 +28,17 @@ logger = logging.getLogger("sts_onboarding")
 
 DATA_STORE_PATH = Path(".sts_users.json")
 
-# The 8 canonical discovery fields matching the prompt
+# The canonical user discovery profile fields matching what Simran asks
 VALID_PROFILE_FIELDS = frozenset({
     "name",
     "location",
     "occupation",
     "hobbies",
     "music_taste",
+    "favorite_song",
+    "musical_role",
+    "singing_comfort",
+    "referral_source",
     "expectations",
     "duet_attempted",
     "coins_explained",
@@ -127,6 +131,10 @@ class UserDiscoveryProfile:
     occupation: str | None = None
     hobbies: list[str] = field(default_factory=list)
     music_taste: list[str] = field(default_factory=list)
+    favorite_song: str | None = None
+    musical_role: str | None = None
+    singing_comfort: str | None = None
+    referral_source: str | None = None
     expectations: str | None = None
     duet_attempted: bool = False
     coins_explained: bool = False
@@ -146,6 +154,10 @@ class UserDiscoveryProfile:
             occupation=data.get("occupation"),
             hobbies=list(data.get("hobbies", [])),
             music_taste=list(data.get("music_taste", [])),
+            favorite_song=data.get("favorite_song"),
+            musical_role=data.get("musical_role"),
+            singing_comfort=data.get("singing_comfort"),
+            referral_source=data.get("referral_source"),
             expectations=data.get("expectations"),
             duet_attempted=bool(data.get("duet_attempted", False)),
             coins_explained=bool(data.get("coins_explained", False)),
@@ -320,6 +332,14 @@ class OnboardingTracker:
             self.discovered_topics.add("hobbies")
         if self.profile.music_taste:
             self.discovered_topics.add("music_taste")
+        if self.profile.favorite_song:
+            self.discovered_topics.add("favorite_song")
+        if self.profile.musical_role:
+            self.discovered_topics.add("musical_role")
+        if self.profile.singing_comfort:
+            self.discovered_topics.add("singing_comfort")
+        if self.profile.referral_source:
+            self.discovered_topics.add("referral_source")
         if self.profile.expectations:
             self.discovered_topics.add("expectations")
         if self.profile.duet_attempted:
@@ -439,6 +459,14 @@ class OnboardingTracker:
         elif clean_field == "music_taste":
             if clean_val not in self.profile.music_taste:
                 self.profile.music_taste.append(clean_val)
+        elif clean_field == "favorite_song":
+            self.profile.favorite_song = clean_val
+        elif clean_field == "musical_role":
+            self.profile.musical_role = clean_val
+        elif clean_field == "singing_comfort":
+            self.profile.singing_comfort = clean_val
+        elif clean_field == "referral_source":
+            self.profile.referral_source = clean_val
         elif clean_field == "expectations":
             self.profile.expectations = clean_val
         elif clean_field == "duet_attempted":
@@ -624,8 +652,16 @@ class OnboardingTracker:
             known.append(f"Occupation: {self.profile.occupation}")
         if self.profile.hobbies:
             known.append(f"Hobbies: {', '.join(self.profile.hobbies)}")
+        if self.profile.referral_source:
+            known.append(f"Found Roxstar Via: {self.profile.referral_source}")
+        if self.profile.musical_role:
+            known.append(f"Musical Role: {self.profile.musical_role}")
+        if self.profile.singing_comfort:
+            known.append(f"Singing Comfort: {self.profile.singing_comfort}")
         if self.profile.music_taste:
             known.append(f"Music Taste: {', '.join(self.profile.music_taste)}")
+        if self.profile.favorite_song:
+            known.append(f"Favorite/Loop Song: {self.profile.favorite_song}")
         if self.profile.expectations:
             known.append(f"Expectations: {self.profile.expectations}")
 

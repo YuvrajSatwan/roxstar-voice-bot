@@ -1,13 +1,14 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 30/30 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: 31/31 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
 ## 1. Completed Tasks (Verified)
 
 ### Core Architecture & Media Pipeline
+- [x] **Comprehensive Discovery Profile & Sensible First-Interaction Intro**: Expanded `UserDiscoveryProfile` and `save_profile` with `referral_source`, `musical_role`, `singing_comfort`, and `favorite_song` fields alongside `name`, `location`, `occupation`, `hobbies`, `music_taste`, `expectations`, `duet_attempted`, and `coins_explained`. Replaced Phase 3 "saw other rooms" question with authentic Roxstar community introduction.
 - [x] **Strict Turn-Taking & Non-Blocking Silent Tools**: Configured `RealtimeModel` with `tool_behavior=genai_types.Behavior.NON_BLOCKING` and updated `save_profile` to return `None` (`reply_required=False`), enabling automatic `SILENT` tool response scheduling. Eliminated multi-turn runaway speech and prohibited post-tool thinking fillers (`"Hmm... ruko, soch rahi hoon"`).
 - [x] **Direct Speech-to-Speech (S2S) Engine**: Integrated Google Gemini 3.8 Live API (`gemini-3.8-live`) via `livekit-plugins-google.realtime.RealtimeModel` with native bidirectional 24kHz PCM audio streaming.
 - [x] **LiveKit Agent Worker**: Implemented prewarmed worker (`worker.py`) connecting as `sts-simran` with `JobExecutorType.THREAD` and `num_idle_processes=1`.

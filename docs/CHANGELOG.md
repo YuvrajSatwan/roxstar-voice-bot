@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Delhi-Only Identity & Zero-Commentary On Other Cities**:
+  - Anchored Simran's origin and identity strictly in Delhi: when swapping names, she introduces herself as Simran from Delhi (`"Oho [Name]! Main Simran, Delhi se. Waise aap kya karte ho — job ya college?"`).
+  - Completely removed city probing and eliminated commentary, evaluations, and stereotypes on other cities (no clichés about Mumbai trains, Bangalore traffic, or Pune weather).
+- **Thinking Stall Fix on Tool Completion**:
+  - Removed `tool_response_scheduling=SILENT` from `RealtimeModel` in `worker.py`. Setting `SILENT` caused Gemini Live API to suppress verbal response scheduling after tool executions (like `save_profile`), leaving the session hanging in `thinking` indefinitely. Reverted to standard `WHEN_IDLE` scheduling so Simran naturally speaks her reply immediately after capturing user details.
+- **Unbuffered Subprocess Logging**:
+  - Configured `PYTHONUNBUFFERED=1` and `-u` flags in `run_sts.py` ensuring real-time log flushing across child worker processes.
 - **Curious Follow-Up on Generic Occupation Answers**:
   - Enhanced Simran's conversational funnel in `prompt.py` with explicit generic occupation follow-up rules: when users provide broad answers (e.g. "business", "job", "college", "student", "freelancing", "startup", "office"), Simran will not rush past to hobbies or music. Instead, she reacts with genuine interest and asks exactly one natural follow-up question (e.g. "Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai aapki?") before sharing her own design work and advancing.
   - Implemented `is_generic_occupation()` in `onboarding.py` and added automatic `OCCUPATION NOTE` context guidance in `OnboardingTracker.get_summary_context()` that stays active until concrete occupation details are discovered.

@@ -50,6 +50,7 @@ def main() -> None:
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
+    env["PYTHONUNBUFFERED"] = "1"
     env["GOOGLE_GENAI_API_VERSION"] = "v1beta"
     existing_pythonpath = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = f"{str(_parent_dir)}{os.pathsep}{str(_current_dir)}{os.pathsep}{existing_pythonpath}".rstrip(os.pathsep)
@@ -57,7 +58,7 @@ def main() -> None:
     def start_token_server() -> subprocess.Popen:
         print("[Supervisor] Launching STS Token Server...")
         return subprocess.Popen(
-            [sys.executable, "-m", "sts_lab.token_server"],
+            [sys.executable, "-u", "-m", "sts_lab.token_server"],
             stdout=sys.stdout,
             stderr=sys.stderr,
             env=env,
@@ -66,7 +67,7 @@ def main() -> None:
     def start_worker() -> subprocess.Popen:
         print("[Supervisor] Launching LiveKit STS Worker (prewarmed production mode)...")
         return subprocess.Popen(
-            [sys.executable, "-m", "sts_lab.worker", "start"],
+            [sys.executable, "-u", "-m", "sts_lab.worker", "start"],
             stdout=sys.stdout,
             stderr=sys.stderr,
             env=env,

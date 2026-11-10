@@ -14,7 +14,7 @@
 - [x] **Dedicated Token Server**: Built HTTP server on port 8001 handling `/token`, `/rooms`, `/health`, and `/duets` with parallel LiveKit room prep and agent dispatch.
 
 ### Persona & Conversational Design
-- [x] **Simran 22yo South Delhi Persona**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), and Trade Rule.
+- [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Explicitly eliminated city probing and prohibited commentary, critiques, or clichés about other cities.
 - [x] **Curious Follow-Up on Generic Occupation Answers**: Engineered natural conversation deepening when users give generic occupation responses (e.g., "business", "job", "college", "student", "freelance", "startup"). Instead of instantly jumping to hobbies or music, Simran asks exactly one natural, curious follow-up ("Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai?") before sharing her design work and advancing. Backed by `is_generic_occupation()` detection and dynamic LLM context guidance in `OnboardingTracker`.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
 - [x] **Anti-Chit-Chat Excuse Engine**: Implemented strict 2-decline exit rule using authentic personal excuses (Swiggy, chai, client ping, battery low) to gracefully close sessions under 25 words.

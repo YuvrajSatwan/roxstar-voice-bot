@@ -264,10 +264,8 @@ async def entrypoint(ctx: JobContext) -> None:
             input_audio_transcription=transcription_config,
             output_audio_transcription=transcription_config,
             temperature=0.7,
-            presence_penalty=0.4,
-            frequency_penalty=0.4,
         )
-        logger.info("RealtimeModel initialized with penalties and audio transcriptions enabled (api_version=v1beta)")
+        logger.info("RealtimeModel initialized with audio transcriptions enabled (api_version=v1beta)")
     except Exception as e:
         logger.warning("Could not set transcription config (%s), falling back to basic init", e)
         realtime_model = RealtimeModel(
@@ -277,8 +275,6 @@ async def entrypoint(ctx: JobContext) -> None:
             api_key=settings.gemini_api_key,
             api_version="v1beta",
             temperature=0.7,
-            presence_penalty=0.4,
-            frequency_penalty=0.4,
         )
 
     agent = Agent(

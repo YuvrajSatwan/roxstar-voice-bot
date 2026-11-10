@@ -79,7 +79,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Persona Engine & Anti-Chit-Chat Guardrail**:
   - Authored Saara persona in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) (22yo South Delhi media graduate, urban Hinglish, 3 conversational gears, turn length 6–14 words, Trade Rule).
-  - Implemented the **2-Decline Excuse Engine**: after 2 action declines/deflections, Saara makes an authentic personal excuse (momos arrived, mummy yelling for chai, urgent client ping, low battery) and signs off under 25 words.
+  - Implemented the **2-Decline Excuse Engine**: after 2 action declines/deflections, Saara makes an authentic personal excuse (Swiggy/parcel arrived, mummy yelling for chai, urgent client ping, low battery) and signs off under 25 words.
   - Added silent function tools: `save_profile`, `check_available_duets`, `navigate_to_duet`, and `navigate_to_recording`.
   - Implemented `turn_off_bot()` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) to detach audio input, close sessions, and cleanly shut down the job context when handing off the stage to the user.
 

@@ -98,7 +98,7 @@ sequenceDiagram
 
     alt User chats past 2-3 Duet Nudges
         Worker->>Gemini: Force Realistic Excuse Sign-Off
-        Gemini-->>User: "Arre door bell baji, lagta hai momos aa gaye! Baad mein milte hain, bye!"
+        Gemini-->>User: "Arre door bell baji, lagta hai Swiggy aa gaya! Baad mein milte hain, bye!"
         Worker->>LK: Disconnect session
     end
 ```
@@ -113,7 +113,7 @@ graph LR
     B --> C["Phase 3: RoxStar Pitch<br/>(Check Duets -> Room Invite)"]
     C -->|Accepted| D["Navigate to Duet Room"]
     C -->|Declined / Small Talk| E["Free Coins Insider Tip"]
-    E -->|Keeps Chatting (2-3 nudges)| F["Realistic Sign-Off Excuse<br/>(Momos / Chai / Work / Battery)"]
+    E -->|Keeps Chatting (2-3 nudges)| F["Realistic Sign-Off Excuse<br/>(Swiggy / Chai / Work / Battery)"]
 ```
 
 ---

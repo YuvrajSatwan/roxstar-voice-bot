@@ -42,7 +42,7 @@ VALID_PROFILE_FIELDS = frozenset({
 
 # Saara's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
 SAARA_SIGNOFF_EXCUSES: list[str] = [
-    "Arre door bell baji, lagta hai mere momos aa gaye! Chalti hoon main, bye!",
+    "Arre door bell baji, lagta hai Swiggy wala aa gaya! Chalti hoon main, bye!",
     "Mummy chai ke liye chilla rahi hain! Main bhaagi, tum tab tak gaana zaroor try karna, bye!",
     "Client ka urgent ping aa gaya, design badalna hai! Nikalti hoon, baad mein baat karte hain, bye!",
     "Haaye laptop 4 percent pe aa gaya aur charger doosre kamre mein hai! Bhaagi main, bye!",
@@ -55,7 +55,7 @@ SAARA_DUET_HANDOFF_EXCUSES: list[str] = [
     "Room khul gaya, 'Join Duet' dabao! Client ka urgent ping aa gaya mera, main nikalti hoon. Aag laga dena, bye!",
     "Zabardast choice! Mummy chai ke liye aawaz de rahi hain toh main bhaagi, tum stage pe rock karna, bye bye!",
     "Duet stage ready hai screen pe! Main mic chodti hoon taaki tum dono mast jam karo. All the best, bye!",
-    "Door bell baji, lagta hai momos aa gaye! Main nikal rahi hoon, tum stage pe aag lagao, bye!",
+    "Door bell baji, lagta hai Swiggy aa gaya! Main nikal rahi hoon, tum stage pe aag lagao, bye!",
 ]
 
 # Realistic excuses & handoff reasons when user agrees to solo recording (strictly under 25 words)
@@ -63,7 +63,7 @@ SAARA_SOLO_HANDOFF_EXCUSES: list[str] = [
     "Studio stage khul gaya screen pe! Laptop 4 percent pe aa gaya mera, main bhaagi. Solo mic pe aag lagao, bye!",
     "Mast choice! Mummy chai ke liye aawaz de rahi hain toh main nikalti hoon. Dil khol ke gaana, bye bye!",
     "Recording stage ready hai! Client ka urgent ping aa gaya mera, main bhaagi. All the best, rock karna, bye!",
-    "Door bell baj gayi, lagta hai mere momos aa gaye! Main nikal rahi hoon, tum solo mic pe aag lagao, bye!",
+    "Door bell baj gayi, lagta hai mera parcel aa gaya! Main nikal rahi hoon, tum solo mic pe aag lagao, bye!",
 ]
 
 

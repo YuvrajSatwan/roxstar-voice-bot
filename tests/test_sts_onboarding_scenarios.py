@@ -265,7 +265,7 @@ def test_scenario_12_user_keeps_chatting_after_multiple_nudges() -> None:
     # Verify random excuse picker returns one of Saara's authentic excuses
     excuse = tracker.get_random_excuse()
     assert excuse in SAARA_SIGNOFF_EXCUSES
-    assert any(keyword in excuse.lower() for keyword in ["client", "mummy", "momos", "laptop", "friend", "deadline", "ritika"])
+    assert any(keyword in excuse.lower() for keyword in ["client", "mummy", "swiggy", "parcel", "laptop", "friend", "deadline", "ritika"])
 
 
 def test_scenario_13_user_says_cannot_sing_two_attempt_encouragement() -> None:

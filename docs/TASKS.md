@@ -16,7 +16,7 @@
 ### Persona & Conversational Design
 - [x] **Saara 22yo South Delhi Persona**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), and Trade Rule.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
-- [x] **Anti-Chit-Chat Excuse Engine**: Implemented strict 2-decline exit rule using authentic personal excuses (momos, chai, client ping, battery low) to gracefully close sessions under 25 words.
+- [x] **Anti-Chit-Chat Excuse Engine**: Implemented strict 2-decline exit rule using authentic personal excuses (Swiggy, chai, client ping, battery low) to gracefully close sessions under 25 words.
 - [x] **Silent Tool Execution**: Defined 4 function tools (`save_profile`, `check_available_duets`, `navigate_to_duet`, `navigate_to_recording`) operating silently without conversational announcements.
 - [x] **Clean Stage Handover & Bot Power-Off**: Implemented audio track detachment, session closure, and job shutdown (`turn_off_bot`) when user transitions to singing or solo recording.
 

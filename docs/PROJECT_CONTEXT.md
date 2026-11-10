@@ -222,7 +222,7 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
    - *Decision*: Initialize SSL context and pre-import heavy modules (`google.genai`, `anyio`) during worker boot using `num_idle_processes=1`.
    - *Rationale*: Slashes the initial room connection and greeting delay by 5–6 seconds on cold starts.
 3. **Anti-Chit-Chat Excuse Engine (2-Decline Guardrail)**:
-   - *Decision*: Track user action invitations (`action_nudge_count`). After two declines or deflections, Saara makes a realistic excuse (e.g., momos arrived, mummy yelling for chai, urgent client ping) and wraps up under 25 words.
+   - *Decision*: Track user action invitations (`action_nudge_count`). After two declines or deflections, Saara makes a realistic excuse (e.g., Swiggy/parcel arrived, mummy yelling for chai, urgent client ping) and wraps up under 25 words.
    - *Rationale*: Prevents costly, open-ended chit-chat and avoids awkward bot-like refusals while maintaining a 100% human South Delhi personality.
 4. **Paced 4–5 Minute Engagement Flow**:
    - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Saara never reveals her city unless directly asked).

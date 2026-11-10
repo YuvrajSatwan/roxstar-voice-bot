@@ -1,7 +1,7 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 28/28 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: 29/29 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
@@ -14,6 +14,7 @@
 - [x] **Dedicated Token Server**: Built HTTP server on port 8001 handling `/token`, `/rooms`, `/health`, and `/duets` with parallel LiveKit room prep and agent dispatch.
 
 ### Persona & Conversational Design
+- [x] **Elimination of 'ji' Formality with User Names**: Enforced non-negotiable rule forbidding "ji" attached to user names (no "Yuvi ji", "Rahul ji", "[Name] ji"). Simran addresses users directly by first name ("Yuvi!", "Rahul!"), preserving friendly peer intimacy while retaining respectful "aap" pronouns.
 - [x] **Phase 2 Music Opener ("Aap Gaane Sunte Ho Ya Gaate Ho?") & Adaptive Branching**: Replaced generic Phase 2 opener with the core question *"Chalo ab thodi gaano ki baat karte hain — waise aap gaane sirf sunte ho ya khud bhi gaate ho?"*, branching organically for pure listeners (genre/loop song validation + listening habits) versus singers/hummers (bathroom singer check + performance anxiety bond). Removed duplicate questioning in Phase 3.
 - [x] **Natural Laughter & Laughter-Off Mode**: Authored authentic Hindi laughter guidelines in `prompt.py` (spontaneous giggles `"hehe"`, warm breathy chuckles `"haha yaar"`, dramatic teasing laughs `"haha haaye!"`). Added full Turned-Off Laughter mode in `OnboardingTracker` allowing users to suppress laughter for a calm, composed tone.
 - [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Explicitly eliminated city probing and prohibited commentary, critiques, or clichés about other cities.

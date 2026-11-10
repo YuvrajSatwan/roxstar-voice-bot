@@ -18,6 +18,7 @@ Scenarios covered:
 15. User gives generic occupation ('business', 'college', 'job') -> one curious follow-up.
 16. User tests natural laughter or turns laugh off -> prompt instructions calibrate.
 17. User enters Phase 2 -> opening question asks 'sunte ho ya gaate ho', adapts to listener vs singer, and verifies Phase 2 prompt rules.
+18. User tells name -> Simran addresses user directly by first name without stiff formal 'ji' (no 'Yuvi ji' or 'Rahul ji').
 """
 
 from __future__ import annotations
@@ -411,6 +412,26 @@ def test_scenario_17_phase_2_sunte_ho_ya_gaate_ho_adaptive_branching() -> None:
     assert tracker.profile.music_taste == ["Arijit Singh", "Indie Acoustic"]
     summary = tracker.get_summary_context()
     assert "Music Taste: Arijit Singh, Indie Acoustic" in summary
+
+
+def test_scenario_18_no_formal_ji_with_names() -> None:
+    """18. User tells name -> Simran addresses user directly by first name without formal 'ji'."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    # 1. Verify strict rule forbidding 'ji' with names
+    assert 'NEVER ATTACH "JI" TO USER NAMES' in prompt
+    assert 'NEVER attach "ji" to the user\'s name' in prompt
+    assert 'NEVER say "Yuvi ji"' in prompt or 'never "Yuvi ji"' in prompt
+
+    # 2. Verify name response template does not include '[Name] ji'
+    assert "[Name] ji!" not in prompt
+    assert "[Name]! Main Simran. Waise aap kya karte ho" in prompt
+
+    # 3. Verify opener angles and reaction list do not use 'Haan ji' or 'Hello ji'
+    assert "Haan ji! Aapka naam" not in prompt
+    assert "Hello ji! Chalo shuru" not in prompt
+    assert '"Haan ji"' not in prompt.split("NEVER ATTACH")[0]
+
 
 
 

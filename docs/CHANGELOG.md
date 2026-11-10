@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Formality Calibration — Elimination of 'ji' with User Names**:
+  - Enforced strict non-negotiable rule forbidding the use of "ji" with user names (e.g. NEVER say "Yuvi ji", "Rahul ji", "[Name] ji").
+  - Configured Simran to address users directly by their first name alone ("Yuvi!", "Rahul!", "[Name]!"), maintaining a relaxed, friendly 22-year-old peer-to-peer vibe while preserving respectful "aap" pronouns.
+  - Cleaned all opening greeting variations and reaction phrases to avoid formal "Haan ji" or "Hello ji" (replaced with natural "Haan", "Hey", "Hello").
+  - Added automated test scenario `test_scenario_18_no_formal_ji_with_names` (29/29 pytest tests passing).
 - **Phase 2 Music Opener ("Aap Gaane Sunte Ho Ya Gaate Ho?") & Adaptive Branching**:
   - Reframed the very first question of Phase 2 (Musical Soul) around the user's core intent: *"Chalo ab thodi gaano ki baat karte hain — waise aap gaane sirf sunte ho ya khud bhi gaate ho?"* (or *"Waise aap gaane sirf sunte ho ya khud bhi gunguna lete ho?"*).
   - Engineered distinct adaptive paths based on user response:

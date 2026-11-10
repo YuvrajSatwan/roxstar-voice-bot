@@ -5,7 +5,8 @@ import { AiGlyph } from './AiGlyph';
 
 interface TranscriptViewProps {
   transcripts: TranscriptItem[];
-  saraahState: 'idle' | 'listening' | 'thinking' | 'speaking';
+  simranState?: 'idle' | 'listening' | 'thinking' | 'speaking';
+  saraahState?: 'idle' | 'listening' | 'thinking' | 'speaking';
   onSendMessage: (text: string) => void;
   disabled?: boolean;
 }
@@ -19,10 +20,12 @@ const QUICK_SUGGESTIONS = [
 
 export const TranscriptView: React.FC<TranscriptViewProps> = ({
   transcripts,
+  simranState,
   saraahState,
   onSendMessage,
   disabled = false,
 }) => {
+  const currentState = simranState || saraahState || 'idle';
   const [inputText, setInputText] = useState('');
   const scrollerRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -39,7 +42,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
     } else if (transcripts.length > 0) {
       setUnseen(true);
     }
-  }, [transcripts, saraahState]);
+  }, [transcripts, currentState]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -67,9 +70,9 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
         {transcripts.length === 0 ? (
           <div className="conversation-empty">
             <div className="conversation-empty__glyph">
-              <AiGlyph state={saraahState} size="md" />
+              <AiGlyph state={currentState} size="md" />
             </div>
-            <h3 className="conversation-empty__title">Saraah is here</h3>
+            <h3 className="conversation-empty__title">Simran is here</h3>
             <p className="conversation-empty__body">
               Start speaking whenever you're ready, or tap a suggestion below to start jamming.
             </p>
@@ -86,19 +89,19 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
                 );
               }
 
-              const isSaraah = t.speaker === 'Saraah';
+              const isAi = t.speaker === 'Simran' || t.speaker === 'Saraah';
               return (
                 <li
                   key={t.id}
                   className={`transcript-group ${
-                    isSaraah ? 'transcript-group--ai' : 'transcript-group--user'
+                    isAi ? 'transcript-group--ai' : 'transcript-group--user'
                   }`}
                 >
                   <header className="transcript-group__head">
                     <span className="transcript-group__name">
-                      {isSaraah ? 'Saraah' : 'You'}
+                      {isAi ? 'Simran' : 'You'}
                     </span>
-                    {isSaraah ? (
+                    {isAi ? (
                       <span className="transcript-group__tag">Friend</span>
                     ) : (
                       <Mic
@@ -118,10 +121,10 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
               );
             })}
 
-            {saraahState === 'thinking' && (
+            {currentState === 'thinking' && (
               <li className="transcript-thinking">
                 <AiGlyph state="thinking" size="xs" />
-                <span>Saraah is thinking…</span>
+                <span>Simran is thinking…</span>
               </li>
             )}
           </ol>
@@ -174,7 +177,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
             disabled={disabled}
             placeholder={
               disabled
-                ? 'Join call to chat with Saraah…'
+                ? 'Join call to chat with Simran…'
                 : 'Type a message or song name (or just speak)…'
             }
             className="composer-input"

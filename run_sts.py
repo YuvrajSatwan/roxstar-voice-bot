@@ -35,7 +35,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 def main() -> None:
     print("=" * 60)
-    print("  🚀 Starting Saraah Gemini 3.8 Live STS Lab")
+    print("  🚀 Starting Simran Gemini 3.8 Live STS Lab")
     print("  Token Server: http://127.0.0.1:8001")
     print("  Model:        gemini-3.8-live (Multimodal Native Audio)")
     try:
@@ -44,7 +44,7 @@ def main() -> None:
     except Exception:
         active_voice = "Leda"
     print(f"  Voice:        {active_voice}")
-    print("  Persona:      Saraah (AI Sathi & Tech Consultant)")
+    print("  Persona:      Simran (AI Sathi & Tech Consultant)")
     print("=" * 60)
 
     env = os.environ.copy()

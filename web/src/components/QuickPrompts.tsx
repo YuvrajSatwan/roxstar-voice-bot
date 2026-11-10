@@ -39,7 +39,7 @@ export const QuickPrompts: React.FC<QuickPromptsProps> = ({ onSelectPrompt, disa
     <div className="quick-prompts-container">
       <div className="quick-prompts-label">
         <Sparkles size={14} className="quick-prompts-icon" />
-        <span>Vibe with Saraah (Click to ask or just speak naturally):</span>
+        <span>Vibe with Simran (Click to ask or just speak naturally):</span>
       </div>
 
       <div className="quick-prompts-grid">

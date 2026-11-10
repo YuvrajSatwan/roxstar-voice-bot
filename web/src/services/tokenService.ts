@@ -38,7 +38,7 @@ export async function requestStsSession(name: string, room?: string): Promise<St
     url: data.url,
     token: data.token,
     room: data.room,
-    persona: data.persona || 'Saraah',
+    persona: data.persona || 'Simran',
     model: data.model || 'gemini-3.8-live',
     voice: data.voice || 'Sulafat',
   };

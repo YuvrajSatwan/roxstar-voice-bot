@@ -10,7 +10,7 @@
 
 **STS Lab** is a high-performance, low-latency AI Voice Companion prototype built for **RoxStar**, an India-born social singing and karaoke platform.
 
-The system powers **Saara**, a 22-year-old female music host and digital companion from South Delhi. Saara guides new users through real-time conversational onboarding, discovers their musical tastes, introduces app features (duet rooms, solo recording, community posting, and free daily coin gifting), and gracefully transitions the user to singing before powering down her voice agent to leave the stage completely to the user.
+The system powers **Simran**, a 22-year-old female music host and digital companion from South Delhi. Simran guides new users through real-time conversational onboarding, discovers their musical tastes, introduces app features (duet rooms, solo recording, community posting, and free daily coin gifting), and gracefully transitions the user to singing before powering down her voice agent to leave the stage completely to the user.
 
 ---
 
@@ -85,16 +85,16 @@ flowchart TD
      - `GET /health` & `GET /`: Healthcheck returning service state, model, and active voice.
      - `GET /duets`: Lists active duet rooms from the registry.
      - `POST /token`: Concurrently provisions the LiveKit room (`ensure_room_and_dispatch`) and issues a signed JWT token with a 2-hour TTL.
-     - `POST /rooms`: Creates a unique room code (`sts-saara-xxxx`).
+     - `POST /rooms`: Creates a unique room code (`sts-simran-xxxx`).
 
 3. **[`worker.py`](file:///y:/roxstar/sts_lab/worker.py)** — *LiveKit STS Worker*:
-   - Connects to LiveKit as agent `sts-saraah`.
+   - Connects to LiveKit as agent `sts-simran`.
    - Prewarms SSL context, `anyio`, and `google.genai` packages to eliminate cold-start delay.
    - Initialises `RealtimeModel` with Gemini 3.8 Live API, configuring audio transcription and temperature (0.7).
    - Exposes 4 LLM function tools:
      - `save_profile(field, value)`: Silently accumulates user info.
      - `check_available_duets(genre)`: Queries available rooms from `DuetRoomRegistry`.
-     - `navigate_to_duet(room_id)`: Dispatches UI navigation event, triggers Saara's signoff excuse, and shuts down bot.
+     - `navigate_to_duet(room_id)`: Dispatches UI navigation event, triggers Simran's signoff excuse, and shuts down bot.
      - `navigate_to_recording(song_title)`: Dispatches solo recording event, triggers handoff excuse, and shuts down bot.
    - Handles client data events (`roxstar.chat`, `roxstar.app_event`, `roxstar.duet_decline`, `roxstar.user_identity`).
    - Implements `turn_off_bot()`: flushes final audio (1.2s buffer), detaches input audio, closes sessions cleanly, and shuts down the job context.
@@ -106,7 +106,7 @@ flowchart TD
    - `OnboardingTracker`: Manages session discovery state, tooltip deduplication, coin balances (50 welcome coins), action nudge counter, and signoff excuse selection.
 
 5. **[`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py)** — *Persona & System Prompt*:
-   - Defines Saara's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (6–14 words), Trade Rule, and strict 2-decline exit rule.
+   - Defines Simran's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (6–14 words), Trade Rule, and strict 2-decline exit rule.
    - Contains session tuning directives (`LIVE_SESSION_NOTES`) for Google Gemini 3.8 Live API.
 
 6. **[`config.py`](file:///y:/roxstar/sts_lab/config.py)** — *Configuration*:
@@ -116,10 +116,10 @@ flowchart TD
 
 - **[`App.tsx`](file:///y:/roxstar/sts_lab/web/src/App.tsx)**: Main shell orchestrating the 2-pane studio layout, top navigation, error banners, and contextual tooltip overlay.
 - **[`hooks/useStsRoom.ts`](file:///y:/roxstar/sts_lab/web/src/hooks/useStsRoom.ts)**: Core WebRTC state hook managing connection, audio analyser levels, DataPacket listeners, transcript accumulation, and UI stage transitions.
-- **[`components/SaraahPresence.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SaraahPresence.tsx)**: Dynamic avatar displaying Saara's state (`idle`, `listening`, `speaking`, `away`) and orb visualizer.
+- **[`components/SimranPresence.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SimranPresence.tsx)**: Dynamic avatar displaying Simran's state (`idle`, `listening`, `speaking`, `away`) and orb visualizer.
 - **[`components/KaraokeStageBar.tsx`](file:///y:/roxstar/sts_lab/web/src/components/KaraokeStageBar.tsx)**: Interactive stage controls for solo recording, duet navigation, coin gifting, and stage handoff.
 - **[`components/DiscoveryProfileBadge.tsx`](file:///y:/roxstar/sts_lab/web/src/components/DiscoveryProfileBadge.tsx)**: Live visualization of discovered user profile attributes.
-- **[`components/TranscriptView.tsx`](file:///y:/roxstar/sts_lab/web/src/components/TranscriptView.tsx)**: Real-time scrolling transcript for user, Saara, and system events.
+- **[`components/TranscriptView.tsx`](file:///y:/roxstar/sts_lab/web/src/components/TranscriptView.tsx)**: Real-time scrolling transcript for user, Simran, and system events.
 - **[`components/Controls.tsx`](file:///y:/roxstar/sts_lab/web/src/components/Controls.tsx)**: Mic mute, room join/leave buttons, and audio level meters.
 
 ---
@@ -204,7 +204,7 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
 | `roxstar.user_state` | Worker | Discovered profile updates | `profile`: dict, `discovered`: string[] |
 | `roxstar.coins_awarded` | Worker | Free coin gift notification| `amount`, `balance`, `reason` |
 | `roxstar.tooltip` | Worker | In-app contextual guidance | `id`, `title`, `message`, `target` |
-| `roxstar.stage_transferred`| Worker | Saara handoff notification | `reason`, `room_id`, `song_title` |
+| `roxstar.stage_transferred`| Worker | Simran handoff notification | `reason`, `room_id`, `song_title` |
 | `roxstar.bot_turned_off`| Worker | Bot power-off event | `reason`, `message` |
 | `roxstar.chat` | Web UI | User text fallback turn | `text` |
 | `roxstar.app_event` | Web UI | In-app user interactions | `action` (e.g. `singing_started`, `send_duet_gift`) |
@@ -222,10 +222,10 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
    - *Decision*: Initialize SSL context and pre-import heavy modules (`google.genai`, `anyio`) during worker boot using `num_idle_processes=1`.
    - *Rationale*: Slashes the initial room connection and greeting delay by 5–6 seconds on cold starts.
 3. **Anti-Chit-Chat Excuse Engine (2-Decline Guardrail)**:
-   - *Decision*: Track user action invitations (`action_nudge_count`). After two declines or deflections, Saara makes a realistic excuse (e.g., Swiggy/parcel arrived, mummy yelling for chai, urgent client ping) and wraps up under 25 words.
+   - *Decision*: Track user action invitations (`action_nudge_count`). After two declines or deflections, Simran makes a realistic excuse (e.g., Swiggy/parcel arrived, mummy yelling for chai, urgent client ping) and wraps up under 25 words.
    - *Rationale*: Prevents costly, open-ended chit-chat and avoids awkward bot-like refusals while maintaining a 100% human South Delhi personality.
 4. **Paced 4–5 Minute Engagement Flow**:
-   - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Saara never reveals her city unless directly asked).
+   - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Simran never reveals her city unless directly asked).
    - *Rationale*: Rushing to pitch a duet on turn 5 leads to 90-second drop-offs; letting personal rapport and musical safety build first increases duet conversion rates.
 4. **Clean Bot Power-Off on Handover**:
    - *Decision*: When the user enters a duet room or solo recording studio, the bot detaches its audio input, publishes state updates, and cleanly shuts down its session.
@@ -246,7 +246,7 @@ Stored in `.env` (copy from [`.env.example`](file:///y:/roxstar/sts_lab/.env.exa
 | `LIVEKIT_API_KEY` | Yes | — | LiveKit API Key for room & participant management |
 | `LIVEKIT_API_SECRET` | Yes | — | LiveKit API Secret for signing JWT tokens |
 | `GEMINI_API_KEY` | Yes | — | Google AI Studio API Key for Gemini 3.8 Live API |
-| `STS_AGENT_NAME` | No | `sts-saraah` | Worker registration name in LiveKit dispatch |
+| `STS_AGENT_NAME` | No | `sts-simran` | Worker registration name in LiveKit dispatch |
 | `STS_MODEL` | No | `gemini-3.8-live` | Target Gemini Live model identifier |
 | `STS_VOICE` | No | `Leda` | Target Gemini voice timbre (options: `Leda`, `Puck`, `Aoede`, etc.) |
 | `STS_PORT` | No | `8001` | Local port for `token_server.py` |
@@ -255,7 +255,7 @@ Stored in `.env` (copy from [`.env.example`](file:///y:/roxstar/sts_lab/.env.exa
 
 ## 10. Known Limitations & Technical Constraints
 
-- **Single Active Agent Per Room**: The worker runs as a dedicated agent per room. Multi-bot conversations (e.g. Kabir + Saara simultaneously) require the legacy cascade setup or multi-worker routing.
+- **Single Active Agent Per Room**: The worker runs as a dedicated agent per room. Multi-bot conversations (e.g. Kabir + Simran simultaneously) require the legacy cascade setup or multi-worker routing.
 - **Local JSON Store**: User profiles are saved in `.sts_users.json` on local disk; a production migration would require a distributed database (e.g. PostgreSQL or Redis).
 - **Static Duet Registry**: Duet rooms are currently populated in-memory in `DuetRoomRegistry` with mock hosts (Aman, Rhea, Kabir); production requires connecting to RoxStar's live backend room service.
 - **Windows Command Convention**: On Windows systems without a virtualenv added to PATH, execute Python commands using `py -m pytest` or `py run_sts.py`.

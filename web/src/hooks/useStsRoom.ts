@@ -23,7 +23,7 @@ export interface StsTelemetry {
 
 export interface TranscriptItem {
   id: string;
-  speaker: 'Saraah' | 'You' | 'System';
+  speaker: 'Simran' | 'Saraah' | 'You' | 'System';
   text: string;
   time: string;
   isFinal: boolean;
@@ -55,13 +55,14 @@ export interface CoinsAwardedEvent {
   reason: string;
 }
 
-export type SaraahState = 'idle' | 'listening' | 'thinking' | 'speaking';
+export type SimranState = 'idle' | 'listening' | 'thinking' | 'speaking';
+export type SaraahState = SimranState;
 
 export function useStsRoom() {
   const [session, setSession] = useState<StsSession | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.Disconnected);
   const [isMuted, setIsMuted] = useState(false);
-  const [saraahState, setSaraahState] = useState<SaraahState>('idle');
+  const [simranState, setSimranState] = useState<SimranState>('idle');
   const [telemetry, setTelemetry] = useState<StsTelemetry>({
     model: 'gemini-3.8-live',
     voice: 'Sulafat',
@@ -75,9 +76,9 @@ export function useStsRoom() {
   const [navigatedDuetRoom, setNavigatedDuetRoom] = useState<string | null>(null);
   const [navigatedSoloRecording, setNavigatedSoloRecording] = useState<string | null>(null);
 
-  // Pillar 2 & 3: Saara stage handover and coins reward states
-  const [isSaaraAway, setIsSaaraAway] = useState(false);
-  const [saaraAwayReason, setSaaraAwayReason] = useState<string | null>(null);
+  // Pillar 2 & 3: Simran stage handover and coins reward states
+  const [isSimranAway, setIsSimranAway] = useState(false);
+  const [simranAwayReason, setSimranAwayReason] = useState<string | null>(null);
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsAwardedEvent, setCoinsAwardedEvent] = useState<CoinsAwardedEvent | null>(null);
 
@@ -111,10 +112,10 @@ export function useStsRoom() {
       roomRef.current = null;
     }
     setConnectionState(ConnectionState.Disconnected);
-    setSaraahState('idle');
+    setSimranState('idle');
     setAudioLevel(0);
-    setIsSaaraAway(false);
-    setSaaraAwayReason(null);
+    setIsSimranAway(false);
+    setSimranAwayReason(null);
     setCoinsAwardedEvent(null);
     setNavigatedDuetRoom(null);
     setNavigatedSoloRecording(null);
@@ -145,11 +146,11 @@ export function useStsRoom() {
         room.on(RoomEvent.ConnectionStateChanged, (state) => {
           setConnectionState(state);
           if (state === ConnectionState.Connected) {
-            setSaraahState('listening');
+            setSimranState('listening');
           }
         });
 
-        // Handle Audio Tracks (Saraah's speech)
+        // Handle Audio Tracks (Simran's speech)
         room.on(
           RoomEvent.TrackSubscribed,
           (track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => {
@@ -215,14 +216,14 @@ export function useStsRoom() {
               }));
             } else if (msg.type === 'roxstar.sts.state') {
               if (msg.state === 'listening' || msg.state === 'thinking' || msg.state === 'speaking' || msg.state === 'idle') {
-                setSaraahState(msg.state);
+                setSimranState(msg.state);
               }
             } else if (msg.type === 'roxstar.bot_turned_off') {
               console.log('Bot turned off, onboarding complete:', msg.reason);
-              setSaraahState('idle');
-              setIsSaaraAway(true);
+              setSimranState('idle');
+              setIsSimranAway(true);
               if (msg.reason) {
-                setSaaraAwayReason(msg.reason);
+                setSimranAwayReason(msg.reason);
               }
             } else if (msg.type === 'roxstar.tooltip') {
               setActiveTooltip({
@@ -239,19 +240,19 @@ export function useStsRoom() {
                 setDiscoveredTopics(msg.discovered);
               }
             } else if (msg.type === 'roxstar.duet_navigation') {
-              console.log('Duet navigation triggered by Saara:', msg.room_id);
+              console.log('Duet navigation triggered by Simran:', msg.room_id);
               setNavigatedDuetRoom(msg.room_id || 'duet-active');
             } else if (msg.type === 'roxstar.solo_recording_navigation') {
-              console.log('Solo recording navigation triggered by Saara:', msg.song_title);
+              console.log('Solo recording navigation triggered by Simran:', msg.song_title);
               setNavigatedSoloRecording(msg.song_title || 'Tum Hi Ho');
             } else if (msg.type === 'roxstar.stage_transferred') {
-              console.log('Stage transferred to user, Saara stepped away:', msg.reason);
-              setIsSaaraAway(true);
-              setSaaraAwayReason(msg.reason || 'Saara stepped aside so you can jam freely!');
-            } else if (msg.type === 'roxstar.saara_rejoined') {
-              console.log('Saara rejoined the session');
-              setIsSaaraAway(false);
-              setSaaraAwayReason(null);
+              console.log('Stage transferred to user, Simran stepped away:', msg.reason);
+              setIsSimranAway(true);
+              setSimranAwayReason(msg.reason || 'Simran stepped aside so you can jam freely!');
+            } else if (msg.type === 'roxstar.simran_rejoined' || msg.type === 'roxstar.saara_rejoined') {
+              console.log('Simran rejoined the session');
+              setIsSimranAway(false);
+              setSimranAwayReason(null);
             } else if (msg.type === 'roxstar.coins_awarded') {
               const bal = Number(msg.balance ?? 50);
               const amt = Number(msg.amount ?? 50);
@@ -287,7 +288,7 @@ export function useStsRoom() {
                   ...prev,
                   {
                     id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                    speaker: msg.speaker === 'Saraah' ? 'Saraah' : 'You',
+                    speaker: (msg.speaker === 'Simran' || msg.speaker === 'Saraah') ? 'Simran' : 'You',
                     text: incomingText,
                     time: now,
                     isFinal,
@@ -312,7 +313,7 @@ export function useStsRoom() {
           {
             id: 'init',
             speaker: 'System',
-            text: 'Connected with Saara. Say hello or share your favorite songs to begin!',
+            text: 'Connected with Simran. Say hello or share your favorite songs to begin!',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isFinal: true,
           },
@@ -401,11 +402,13 @@ export function useStsRoom() {
     setCoinsAwardedEvent(null);
   }, []);
 
-  const rejoinSaara = useCallback(async () => {
-    setIsSaaraAway(false);
-    setSaaraAwayReason(null);
-    await emitAppEvent('rejoin_saara');
+  const rejoinSimran = useCallback(async () => {
+    setIsSimranAway(false);
+    setSimranAwayReason(null);
+    await emitAppEvent('rejoin_simran');
   }, [emitAppEvent]);
+
+  const rejoinSaara = rejoinSimran;
 
   const sendDuetGift = useCallback(
     async (gift: string, recipient: string) => {
@@ -426,7 +429,8 @@ export function useStsRoom() {
     isConnected,
     isConnecting,
     isMuted,
-    saraahState,
+    simranState,
+    saraahState: simranState,
     telemetry,
     transcripts,
     audioLevel,
@@ -439,11 +443,14 @@ export function useStsRoom() {
     clearDuetNavigation,
     navigatedSoloRecording,
     clearSoloNavigation,
-    isSaaraAway,
-    saaraAwayReason,
+    isSimranAway,
+    isSaaraAway: isSimranAway,
+    simranAwayReason,
+    saaraAwayReason: simranAwayReason,
     coinBalance,
     coinsAwardedEvent,
     dismissCoinsReward,
+    rejoinSimran,
     rejoinSaara,
     sendDuetGift,
     connect,

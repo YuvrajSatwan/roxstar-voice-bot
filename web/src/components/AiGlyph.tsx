@@ -2,11 +2,13 @@ import React, { useEffect, useRef, CSSProperties } from 'react';
 
 const BARS = 5;
 
-/** Saraah's iconic silhouette and gain responsiveness from the main Roxstar design system. */
-export const SARAAH_SILHOUETTE = {
+/** Simran's iconic silhouette and gain responsiveness from the main Roxstar design system. */
+export const SIMRAN_SILHOUETTE = {
   rest: [0.3, 0.4, 0.24, 0.34, 0.2],
   gain: [0.7, 1.0, 0.6, 0.9, 0.5],
 };
+
+export const SARAAH_SILHOUETTE = SIMRAN_SILHOUETTE;
 
 interface AiGlyphProps {
   state: 'idle' | 'listening' | 'thinking' | 'speaking';
@@ -18,7 +20,7 @@ export function AiGlyph({ state, audioLevel = 0, size = 'lg' }: AiGlyphProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const audioLevelRef = useRef(audioLevel);
   audioLevelRef.current = audioLevel;
-  const { rest, gain } = SARAAH_SILHOUETTE;
+  const { rest, gain } = SIMRAN_SILHOUETTE;
   const speaking = state === 'speaking';
 
   useEffect(() => {

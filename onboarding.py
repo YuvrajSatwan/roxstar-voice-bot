@@ -1,4 +1,4 @@
-"""State & Discovery Engine for Saara (STS Lab Prototype).
+"""State & Discovery Engine for Simran (STS Lab Prototype).
 
 Tracks user discovery across the 8 key topics:
 1. Name
@@ -40,8 +40,8 @@ VALID_PROFILE_FIELDS = frozenset({
     "coins_explained",
 })
 
-# Saara's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
-SAARA_SIGNOFF_EXCUSES: list[str] = [
+# Simran's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
+SIMRAN_SIGNOFF_EXCUSES: list[str] = [
     "Arre door bell baji, lagta hai Swiggy wala aa gaya! Chalti hoon main, bye!",
     "Mummy chai ke liye chilla rahi hain! Main bhaagi, tum tab tak gaana zaroor try karna, bye!",
     "Client ka urgent ping aa gaya, design badalna hai! Nikalti hoon, baad mein baat karte hain, bye!",
@@ -51,7 +51,7 @@ SAARA_SIGNOFF_EXCUSES: list[str] = [
 ]
 
 # Enthusiastic natural Hindi handoff lines when user agrees to join a duet (strictly under 25 words)
-SAARA_DUET_HANDOFF_EXCUSES: list[str] = [
+SIMRAN_DUET_HANDOFF_EXCUSES: list[str] = [
     "Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki tum dono mast jam karo. Aag laga dena, bye!",
     "Zabardast choice! Duet stage ready hai, dil khol ke gaao aur rock karna. All the best, bye bye!",
     "Sahi hai yaar! Room ready ho gaya screen pe, main mic chhodti hoon. Poori aag laga dena, bye!",
@@ -59,12 +59,17 @@ SAARA_DUET_HANDOFF_EXCUSES: list[str] = [
 ]
 
 # Enthusiastic natural Hindi handoff lines when user agrees to solo recording (strictly under 25 words)
-SAARA_SOLO_HANDOFF_EXCUSES: list[str] = [
+SIMRAN_SOLO_HANDOFF_EXCUSES: list[str] = [
     "Zabardast! Studio mic ready hai screen pe, dil khol ke gaana aur rock karna. All the best, bye!",
     "Mast choice! Recording stage khul gaya screen pe, poori aag laga dena. Dil khol ke gaao, bye bye!",
     "Yeh hui na baat! Mic live hai studio mein, all the best aur rock karna, bye!",
     "Sahi hai yaar! Recording screen pe aa gayi hai, khul ke gaana. All the best, bye!",
 ]
+
+# Backward-compatibility aliases for existing imports
+SAARA_SIGNOFF_EXCUSES = SIMRAN_SIGNOFF_EXCUSES
+SAARA_DUET_HANDOFF_EXCUSES = SIMRAN_DUET_HANDOFF_EXCUSES
+SAARA_SOLO_HANDOFF_EXCUSES = SIMRAN_SOLO_HANDOFF_EXCUSES
 
 
 @dataclass
@@ -160,7 +165,7 @@ class DuetRoom:
 
 
 class DuetRoomRegistry:
-    """Registry of live duet rooms so Saara only suggests REAL available rooms."""
+    """Registry of live duet rooms so Simran only suggests REAL available rooms."""
 
     def __init__(self, initial_rooms: list[DuetRoom] | None = None) -> None:
         if initial_rooms is not None:
@@ -288,9 +293,25 @@ class OnboardingTracker:
         self.coins_guidance_given = self.profile.coins_explained
         self.coins_awarded = self.profile.coins_explained
         self.coin_balance = 50 if self.profile.coins_explained else 0
-        self.is_saara_away = False
-        self.saara_away_reason: str | None = None
+        self.is_simran_away = False
+        self.simran_away_reason: str | None = None
         self.bot_turned_off = False
+
+    @property
+    def is_saara_away(self) -> bool:
+        return self.is_simran_away
+
+    @is_saara_away.setter
+    def is_saara_away(self, val: bool) -> None:
+        self.is_simran_away = val
+
+    @property
+    def saara_away_reason(self) -> str | None:
+        return self.simran_away_reason
+
+    @saara_away_reason.setter
+    def saara_away_reason(self, val: str | None) -> None:
+        self.simran_away_reason = val
 
     def award_welcome_coins(self, amount: int = 50) -> tuple[int, bool]:
         """Awards welcome coins once to new users."""
@@ -314,24 +335,32 @@ class OnboardingTracker:
         logger.info("Deducted %d coins for %s (remaining: %d)", amount, self.profile.user_id, self.coin_balance)
         return True, self.coin_balance
 
+    def mark_simran_away(self, reason: str) -> None:
+        """Sets Simran state to away so the user has the live stage spotlight."""
+        self.is_simran_away = True
+        self.simran_away_reason = reason
+        logger.info("Simran marked away: %s", reason)
+
     def mark_saara_away(self, reason: str) -> None:
-        """Sets Saara state to away so the user has the live stage spotlight."""
-        self.is_saara_away = True
-        self.saara_away_reason = reason
-        logger.info("Saara marked away: %s", reason)
+        """Backward-compatibility alias for mark_simran_away."""
+        self.mark_simran_away(reason)
 
     def mark_bot_turned_off(self, reason: str = "onboarding_completed") -> None:
-        """Marks that Saara onboarding is completed and the bot is powered off."""
-        self.is_saara_away = True
-        self.saara_away_reason = reason
+        """Marks that Simran onboarding is completed and the bot is powered off."""
+        self.is_simran_away = True
+        self.simran_away_reason = reason
         self.bot_turned_off = True
         logger.info("Bot marked turned off: %s", reason)
 
+    def mark_simran_returned(self) -> None:
+        """Restores Simran to active companion state."""
+        self.is_simran_away = False
+        self.simran_away_reason = None
+        logger.info("Simran returned to live stage companion mode")
+
     def mark_saara_returned(self) -> None:
-        """Restores Saara to active companion state."""
-        self.is_saara_away = False
-        self.saara_away_reason = None
-        logger.info("Saara returned to live stage companion mode")
+        """Backward-compatibility alias for mark_simran_returned."""
+        self.mark_simran_returned()
 
     def save_field(self, field_name: str, value: str) -> bool:
         """Silent profile capture called by LLM tool or parser. Never confirms aloud."""
@@ -387,7 +416,7 @@ class OnboardingTracker:
                 tooltip = {
                     "id": "singing_started",
                     "title": "You're on the mic! 🎙️",
-                    "message": "Sing your heart out! Saara is listening warmly.",
+                    "message": "Sing your heart out! Simran is listening warmly.",
                     "target": "stage-mic",
                 }
             song = data.get("song") or "a song"
@@ -509,19 +538,19 @@ class OnboardingTracker:
         return self.action_nudge_count >= 2
 
     def get_random_excuse(self) -> str:
-        """Picks one of Saara's authentic real-world excuses to wrap up the conversation smoothly."""
+        """Picks one of Simran's authentic real-world excuses to wrap up the conversation smoothly."""
         import random
-        return random.choice(SAARA_SIGNOFF_EXCUSES)
+        return random.choice(SIMRAN_SIGNOFF_EXCUSES)
 
     def get_random_duet_handoff_reason(self) -> str:
-        """Picks one of Saara's authentic excuses/reasons to sign off right as user joins a duet room."""
+        """Picks one of Simran's authentic excuses/reasons to sign off right as user joins a duet room."""
         import random
-        return random.choice(SAARA_DUET_HANDOFF_EXCUSES)
+        return random.choice(SIMRAN_DUET_HANDOFF_EXCUSES)
 
     def get_random_solo_handoff_reason(self) -> str:
-        """Picks one of Saara's authentic excuses/reasons to sign off right as user starts solo recording."""
+        """Picks one of Simran's authentic excuses/reasons to sign off right as user starts solo recording."""
         import random
-        return random.choice(SAARA_SOLO_HANDOFF_EXCUSES)
+        return random.choice(SIMRAN_SOLO_HANDOFF_EXCUSES)
 
     def get_summary_context(self) -> str:
         """Returns a concise summary block to inject into the LLM context."""

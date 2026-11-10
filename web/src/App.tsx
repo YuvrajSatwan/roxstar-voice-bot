@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStsRoom } from './hooks/useStsRoom';
-import { SaraahPresence } from './components/SaraahPresence';
+import { SimranPresence } from './components/SimranPresence';
 import { TranscriptView } from './components/TranscriptView';
 import { Controls } from './components/Controls';
 import { TooltipOverlay } from './components/TooltipOverlay';
@@ -15,7 +15,7 @@ export function App() {
     isConnected,
     isConnecting,
     isMuted,
-    saraahState,
+    simranState,
     telemetry,
     transcripts,
     audioLevel,
@@ -28,12 +28,12 @@ export function App() {
     clearDuetNavigation,
     navigatedSoloRecording,
     clearSoloNavigation,
-    isSaaraAway,
-    saaraAwayReason,
+    isSimranAway,
+    simranAwayReason,
     coinBalance,
     coinsAwardedEvent,
     dismissCoinsReward,
-    rejoinSaara,
+    rejoinSimran,
     sendDuetGift,
     connect,
     disconnect,
@@ -62,7 +62,7 @@ export function App() {
           </div>
           <span className="brand-wordmark">Roxstar</span>
           <span className="brand-divider">·</span>
-          <span className="brand-companion">Saara</span>
+          <span className="brand-companion">Simran</span>
           <span className="brand-role">Singing Buddy</span>
         </div>
 
@@ -83,7 +83,7 @@ export function App() {
             target="_blank"
             rel="noreferrer"
             className="nav-link-cascade"
-            title="Switch to original Dual-Bot (Kabir & Saraah) Cascade UI"
+            title="Switch to original Dual-Bot (Kabir & Simran) Cascade UI"
           >
             <span>Dual-Bot (5174)</span>
             <ArrowUpRight size={13} />
@@ -105,16 +105,16 @@ export function App() {
       <main className="room-main">
         {/* Left Pane: Stage */}
         <section className="stage-pane" aria-label="Audio Stage">
-          <SaraahPresence
-            state={saraahState}
+          <SimranPresence
+            state={simranState}
             audioLevel={audioLevel}
             isConnected={isConnected}
             userName={userName}
             onUserNameChange={setUserName}
             isMuted={isMuted}
-            isSaaraAway={isSaaraAway}
-            saaraAwayReason={saaraAwayReason}
-            onRejoinSaara={rejoinSaara}
+            isSimranAway={isSimranAway}
+            simranAwayReason={simranAwayReason}
+            onRejoinSimran={rejoinSimran}
           />
 
           {/* Karaoke Feature Controls */}
@@ -153,7 +153,7 @@ export function App() {
         <section className="conversation-pane" aria-label="Conversation">
           <TranscriptView
             transcripts={transcripts}
-            saraahState={saraahState}
+            simranState={simranState}
             onSendMessage={(text) => {
               void sendTextTurn(text);
             }}

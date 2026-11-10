@@ -1,6 +1,6 @@
 # 🎙️ STS Lab (Speech-to-Speech): Architecture & Workflow Guide
 
-The **STS Lab** is a self-contained, low-latency AI Voice Assistant prototype powered by **Google Gemini 3.8 Live API** and **LiveKit WebRTC**. It simulates **Saara**, a human, 22-year-old music host from South Delhi, who naturally onboards new users onto the RoxStar singing platform.
+The **STS Lab** is a self-contained, low-latency AI Voice Assistant prototype powered by **Google Gemini 3.8 Live API** and **LiveKit WebRTC**. It simulates **Simran**, a human, 22-year-old music host from South Delhi, who naturally onboards new users onto the RoxStar singing platform.
 
 ---
 
@@ -16,7 +16,7 @@ flowchart TD
     subgraph Backend ["STS Lab Services"]
         Super["Supervisor (run_sts.py)"]
         Server["Token Server (:8001)"]
-        Worker["LiveKit Worker (sts-saraah)"]
+        Worker["LiveKit Worker (sts-simran)"]
     end
 
     subgraph Cloud ["External Cloud Platforms"]
@@ -47,9 +47,9 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Supervisor** | `sts_lab/run_sts.py` | Concurrently boots and auto-restarts the Token Server and Worker. |
 | **Token Server** | `sts_lab/token_server.py` | Runs on `:8001`. Handles `/token`, `/rooms`, and `/duets`. Concurrently pre-provisions LiveKit rooms and dispatches the worker. |
-| **STS Worker** | `sts_lab/worker.py` | Connects as `sts-saraah`. Prewarms SSL/libraries, initializes Gemini Realtime session, binds tools (`save_profile`, `check_available_duets`, `navigate_to_duet`), and streams audio. |
+| **STS Worker** | `sts_lab/worker.py` | Connects as `sts-simran`. Prewarms SSL/libraries, initializes Gemini Realtime session, binds tools (`save_profile`, `check_available_duets`, `navigate_to_duet`), and streams audio. |
 | **Onboarding Engine** | `sts_lab/onboarding.py` | State machine tracking discovered user fields, duet rooms, nudge counts, and realistic sign-off excuses. |
-| **Persona Prompt** | `sts_lab/prompt.py` | Defines Saara's 100% human South Delhi identity, conversational boundaries (<= 18 words), zero music snobbery, and pronunciation directives. |
+| **Persona Prompt** | `sts_lab/prompt.py` | Defines Simran's 100% human South Delhi identity, conversational boundaries (<= 18 words), zero music snobbery, and pronunciation directives. |
 | **Frontend UI** | `sts_lab/web/` | React + Vite UI on `:5175`. Provides audio waveform animation, real-time transcripts, state badges, and direct room joining. |
 
 ---
@@ -67,8 +67,8 @@ sequenceDiagram
 
     User->>TS: POST /token (User Name: "Rahul")
     par Concurrent Dispatch
-        TS->>LK: Ensure Room (sts-saara-xxxx)
-        TS->>LK: Create Agent Dispatch (sts-saraah)
+        TS->>LK: Ensure Room (sts-simran-xxxx)
+        TS->>LK: Create Agent Dispatch (sts-simran)
     end
     TS-->>User: Return JWT Token & LiveKit URL
 
@@ -82,7 +82,7 @@ sequenceDiagram
     Worker->>Gemini: Trigger Opening Line (80ms buffer)
     Gemini-->>Worker: Native Audio Stream
     Worker-->>LK: Publish Audio Track
-    LK-->>User: Saara speaks: "Heyy! Main Saara. Ek aur secret singer room mein aa gaya!..."
+    LK-->>User: Simran speaks: "Heyy! Main Simran. Ek aur secret singer room mein aa gaya!..."
 
     loop Real-Time Turn-Taking
         User->>LK: Speaks Hindi / Hinglish
@@ -129,6 +129,6 @@ graph LR
    - `num_idle_processes=1` keeps a hot thread ready, slashing initial greeting latency by **~5–6 seconds**.
 
 3. **100% Human Persona Guardrail**:
-   - Saara strictly deflects AI/bot queries using colloquial Delhi humor.
+   - Simran strictly deflects AI/bot queries using colloquial Delhi humor.
    - She adheres to a strictly paced 6–18 words/turn constraint to maintain authentic human conversational flow.
 

@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-10
 
+### Changed
+- **Complete Project & Persona Rename to Simran**:
+  - Rebranded the persona, backend agent, configs, tests, and web UI across the entire codebase from Saara / Saraah to **Simran**:
+    - **Configuration & Worker**: Updated default agent name to `sts-simran`, room generator to `sts-simran-`, and participant name to `Simran` with `roxstar.simran_rejoined` event support.
+    - **Prompts & Persona**: Updated [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) to define `SIMRAN_ONBOARDING_SYSTEM_PROMPT` while retaining backward-compatible aliases for existing imports (`SAARA_ONBOARDING_SYSTEM_PROMPT`, `SARAAH_STS_SYSTEM_PROMPT`).
+    - **State Engine**: Updated [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py) with `SIMRAN_SIGNOFF_EXCUSES`, `SIMRAN_DUET_HANDOFF_EXCUSES`, `SIMRAN_SOLO_HANDOFF_EXCUSES`, and `is_simran_away` properties with full backward-compatibility accessors.
+    - **Web Frontend**: Updated [`App.tsx`](file:///y:/roxstar/sts_lab/web/src/App.tsx), [`index.html`](file:///y:/roxstar/sts_lab/web/index.html), [`package.json`](file:///y:/roxstar/sts_lab/web/package.json), created [`SimranPresence.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SimranPresence.tsx) and [`SimranOrb.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SimranOrb.tsx), updated `useStsRoom.ts`, `Controls.tsx`, `QuickPrompts.tsx`, and `TranscriptView.tsx`.
+    - **Documentation**: Updated `README.md`, `AGENTS.md`, `docs/PROJECT_CONTEXT.md`, `docs/WORKFLOW.md`, and `docs/TASKS.md`.
+    - **Verification**: Verified with `py -m pytest tests/ -v` (23/23 tests passing) and `npm --prefix web run build` (0 build errors).
+
 ### Added
 - **Natural Hindi Branching for YES vs NO Responses Post-Convincing**:
   - Implemented explicit branching in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) for post-convincing responses:

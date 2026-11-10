@@ -265,7 +265,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
   const handleSendRose = async () => {
     if (!activeLiveDuet) return;
     if (coinBalance < 5) {
-      setGiftToast('Need at least 5 coins! Ask Saara for free daily bonus.');
+      setGiftToast('Need at least 5 coins! Ask Simran for free daily bonus.');
       setTimeout(() => setGiftToast(null), 3000);
       return;
     }
@@ -278,7 +278,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
     setTimeout(() => setGiftToast(null), 2500);
   };
 
-  // Auto-launch Live Duet Stage when Saara directs the user to a duet
+  // Auto-launch Live Duet Stage when Simran directs the user to a duet
   useEffect(() => {
     if (navigatedDuetRoom) {
       const targetLower = navigatedDuetRoom.toLowerCase();
@@ -297,7 +297,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
     }
   }, [navigatedDuetRoom]);
 
-  // Auto-launch Live Solo Recording Stage when Saara directs the user to record solo
+  // Auto-launch Live Solo Recording Stage when Simran directs the user to record solo
   useEffect(() => {
     if (navigatedSoloRecording) {
       setActiveSoloStage({ song_title: navigatedSoloRecording });
@@ -932,7 +932,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
               <span>New Balance: {coinsAwardedEvent.balance} Roxstar Coins</span>
             </div>
             <p className="coins-reward-desc">
-              {coinsAwardedEvent.reason} Saara unlocked your daily rewards! Use your coins on live stages to send Roses & cheer on your duet partner.
+              {coinsAwardedEvent.reason} Simran unlocked your daily rewards! Use your coins on live stages to send Roses & cheer on your duet partner.
             </p>
             <button
               type="button"

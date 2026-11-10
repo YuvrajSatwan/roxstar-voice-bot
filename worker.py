@@ -1,7 +1,7 @@
 """LiveKit STS Worker: Powered by Google Gemini 3.8 Live API.
 
 Direct speech-to-speech without traditional cascaded STT->LLM->TTS steps.
-Single persona: Saraah (AI Sathi & Tech Consultant) with 'Sulafat' voice.
+Single persona: Simran (AI Sathi & Tech Consultant) with 'Sulafat' voice.
 """
 
 from __future__ import annotations
@@ -49,7 +49,11 @@ from livekit.agents.voice.events import (
 from livekit.plugins.google.realtime import RealtimeModel
 
 from sts_lab.config import StsSettings
-from sts_lab.prompt import SAARA_ONBOARDING_SYSTEM_PROMPT, SARAAH_STS_SYSTEM_PROMPT
+from sts_lab.prompt import (
+    SIMRAN_ONBOARDING_SYSTEM_PROMPT,
+    SAARA_ONBOARDING_SYSTEM_PROMPT,
+    SARAAH_STS_SYSTEM_PROMPT,
+)
 from sts_lab.onboarding import (
     DuetRoomRegistry,
     OnboardingTracker,
@@ -86,7 +90,7 @@ async def entrypoint(ctx: JobContext) -> None:
     logger.info("Connecting to room: %s", ctx.room.name)
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    await ctx.room.local_participant.set_name("Saara")
+    await ctx.room.local_participant.set_name("Simran")
     await ctx.room.local_participant.set_attributes({
         "roxstar.role": "bot",
         "roxstar.persona": "sathi",
@@ -116,7 +120,7 @@ async def entrypoint(ctx: JobContext) -> None:
     tracker = OnboardingTracker(profile=profile, store=store)
     logger.info("Initialized fresh OnboardingTracker for new visitor user=%s", tracker.profile.user_id)
 
-    # State tracking for Saara sign-off and turning off the bot
+    # State tracking for Simran sign-off and turning off the bot
     sign_off_state = {
         "in_progress": False,
         "speech_started": False,
@@ -124,7 +128,7 @@ async def entrypoint(ctx: JobContext) -> None:
         "reason": "",
     }
 
-    # Tools definition for Saara
+    # Tools definition for Simran
     @llm.function_tool(
         description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, expectations, duet_attempted, coins_explained). Never mention this tool aloud."
     )
@@ -179,7 +183,7 @@ async def entrypoint(ctx: JobContext) -> None:
         actual_room_id = room_info.room_id if room_info else room_id
 
         handoff_excuse = tracker.get_random_duet_handoff_reason()
-        tracker.mark_saara_away(handoff_excuse)
+        tracker.mark_simran_away(handoff_excuse)
         sign_off_state["in_progress"] = True
         sign_off_state["speech_started"] = False
         sign_off_state["reason"] = handoff_excuse
@@ -214,7 +218,7 @@ async def entrypoint(ctx: JobContext) -> None:
         logger.info("Directing user to solo recording stage: %s", song_title)
         tracker.save_field("duet_attempted", "true")
         handoff_excuse = tracker.get_random_solo_handoff_reason()
-        tracker.mark_saara_away(handoff_excuse)
+        tracker.mark_simran_away(handoff_excuse)
         sign_off_state["in_progress"] = True
         sign_off_state["speech_started"] = False
         sign_off_state["reason"] = handoff_excuse
@@ -241,7 +245,7 @@ async def entrypoint(ctx: JobContext) -> None:
     logger.info("Initializing RealtimeModel with model=%s, voice=%s", settings.model, settings.voice)
 
     full_instructions = (
-        f"{SAARA_ONBOARDING_SYSTEM_PROMPT}\n\n"
+        f"{SIMRAN_ONBOARDING_SYSTEM_PROMPT}\n\n"
         f"====================================================================\n"
         f"SESSION STATE & USER MEMORY\n"
         f"====================================================================\n"
@@ -293,7 +297,7 @@ async def entrypoint(ctx: JobContext) -> None:
         publish_data({
             "type": "roxstar.bot_turned_off",
             "reason": reason,
-            "message": "Saara onboarding complete. Bot turned off so user has full stage.",
+            "message": "Simran onboarding complete. Bot turned off so user has full stage.",
         })
 
         # 3. Detach input audio from session so user microphone is never processed by model
@@ -358,11 +362,11 @@ async def entrypoint(ctx: JobContext) -> None:
         if sign_off_state["in_progress"] and not sign_off_state["turned_off"]:
             if ev.new_state == "speaking":
                 sign_off_state["speech_started"] = True
-                logger.info("Saara started speaking final handoff turn: %s", sign_off_state["reason"])
+                logger.info("Simran started speaking final handoff turn: %s", sign_off_state["reason"])
             elif sign_off_state["speech_started"] and ev.new_state in ("listening", "idle"):
                 sign_off_state["turned_off"] = True
                 sign_off_state["in_progress"] = False
-                logger.info("Saara completed final handoff speech. Initiating bot turn-off in 1.2s...")
+                logger.info("Simran completed final handoff speech. Initiating bot turn-off in 1.2s...")
                 turn_off_t = asyncio.create_task(turn_off_bot(sign_off_state["reason"]))
                 background_tasks.add(turn_off_t)
                 turn_off_t.add_done_callback(background_tasks.discard)
@@ -384,10 +388,10 @@ async def entrypoint(ctx: JobContext) -> None:
         item = ev.item
         role = getattr(item, "role", None)
         if role == "assistant" and hasattr(item, "text_content") and item.text_content:
-            logger.info("Saraah item: %s", item.text_content)
+            logger.info("Simran item: %s", item.text_content)
             publish_data({
                 "type": "roxstar.sts.transcript",
-                "speaker": "Saraah",
+                "speaker": "Simran",
                 "text": item.text_content,
                 "is_final": True,
             })
@@ -403,13 +407,17 @@ async def entrypoint(ctx: JobContext) -> None:
                 text = str(data.get("text", "")).strip()
                 if text:
                     logger.info("Received user chat text: %s", text)
-                    if tracker.is_saara_away:
+                    if tracker.is_simran_away:
                         lower_text = text.lower()
-                        if "saara" in lower_text or "saraah" in lower_text or "kahan" in lower_text or "back" in lower_text:
-                            tracker.mark_saara_returned()
+                        if "simran" in lower_text or "saara" in lower_text or "saraah" in lower_text or "kahan" in lower_text or "back" in lower_text:
+                            tracker.mark_simran_returned()
+                            publish_data({
+                                "type": "roxstar.simran_rejoined",
+                                "message": "Simran is back on mic!",
+                            })
                             publish_data({
                                 "type": "roxstar.saara_rejoined",
-                                "message": "Saara is back on mic!",
+                                "message": "Simran is back on mic!",
                             })
                             session.generate_reply(
                                 user_input=(
@@ -418,11 +426,11 @@ async def entrypoint(ctx: JobContext) -> None:
                                 )
                             )
                         else:
-                            logger.info("Saara is away from stage; suppressing chat response to keep spotlight on user.")
+                            logger.info("Simran is away from stage; suppressing chat response to keep spotlight on user.")
                             return
                     elif tracker.should_sign_off():
                         excuse = tracker.get_random_excuse()
-                        tracker.mark_saara_away(excuse)
+                        tracker.mark_simran_away(excuse)
                         sign_off_state["in_progress"] = True
                         sign_off_state["speech_started"] = False
                         sign_off_state["reason"] = excuse
@@ -473,11 +481,15 @@ async def entrypoint(ctx: JobContext) -> None:
                         "recipient": data.get("recipient", "Host"),
                     })
 
-                elif action == "rejoin_saara":
-                    tracker.mark_saara_returned()
+                elif action in ("rejoin_simran", "rejoin_saara"):
+                    tracker.mark_simran_returned()
+                    publish_data({
+                        "type": "roxstar.simran_rejoined",
+                        "message": "Simran is back on mic!",
+                    })
                     publish_data({
                         "type": "roxstar.saara_rejoined",
-                        "message": "Saara is back on mic!",
+                        "message": "Simran is back on mic!",
                     })
                     session.generate_reply(
                         user_input=(
@@ -504,7 +516,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 tracker.record_duet_declined()
                 if tracker.should_sign_off():
                     excuse = tracker.get_random_excuse()
-                    tracker.mark_saara_away(excuse)
+                    tracker.mark_simran_away(excuse)
                     sign_off_state["in_progress"] = True
                     sign_off_state["speech_started"] = False
                     sign_off_state["reason"] = excuse
@@ -562,7 +574,7 @@ async def entrypoint(ctx: JobContext) -> None:
             audio_sample_rate=24000,
         ),
     )
-    logger.info("Saara STS AgentSession active in room %s", ctx.room.name)
+    logger.info("Simran STS AgentSession active in room %s", ctx.room.name)
 
     # Initial state sync to frontend
     publish_data({
@@ -591,7 +603,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "Speak with VERY HIGH ENERGY, big enthusiasm, and a joyful, beaming, excited voice! "
                         "Ask the user's name first without telling your own name yet: "
                         "'Heyy! Ek aur secret singer room mein aa gaya! Naam kya hai aapka?' "
-                        "(CRITICAL: DO NOT say your name 'Saara' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
+                        "(CRITICAL: DO NOT say your name 'Simran' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
                     )
                 )
         except Exception as exc:

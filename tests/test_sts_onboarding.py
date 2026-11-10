@@ -152,10 +152,13 @@ def test_onboarding_tracker_bot_turned_off() -> None:
     profile = UserDiscoveryProfile(user_id="rahul_stage")
     tracker = OnboardingTracker(profile=profile)
     assert not tracker.bot_turned_off
+    assert not tracker.is_simran_away
     assert not tracker.is_saara_away
 
     tracker.mark_bot_turned_off("User entered solo recording stage")
     assert tracker.bot_turned_off
+    assert tracker.is_simran_away
     assert tracker.is_saara_away
+    assert tracker.simran_away_reason == "User entered solo recording stage"
     assert tracker.saara_away_reason == "User entered solo recording stage"
 

@@ -1,7 +1,7 @@
 # AGENTS.md — Development Guidelines & Instructions for AI Agents
 
 > **Audience**: AI Coding Agents & Engineers working in this repository.  
-> **Mission**: Maintain, extend, and test the RoxStar Saara Speech-to-Speech (STS) Lab without introducing architectural drift, duplicate code, or security risks.
+> **Mission**: Maintain, extend, and test the RoxStar Simran Speech-to-Speech (STS) Lab without introducing architectural drift, duplicate code, or security risks.
 
 ---
 
@@ -47,7 +47,7 @@ Before beginning any substantial development task:
    - Message payloads are JSON-encoded dictionaries containing `type` and `timestamp`.
    - Standard event types include `roxstar.sts.state`, `roxstar.sts.telemetry`, `roxstar.sts.transcript`, `roxstar.user_state`, `roxstar.stage_transferred`, and `roxstar.bot_turned_off`.
 3. **Persona & Guardrails Integrity**:
-   - Saara's persona prompt in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) requires strict conversational constraints:
+   - Simran's persona prompt in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) requires strict conversational constraints:
      - Short turns (6–14 words, max 18).
      - Handoff / exit excuses strictly under 25 words.
      - Maximum 1 question per turn; only ~50% of turns contain questions.

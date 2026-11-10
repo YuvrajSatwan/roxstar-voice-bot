@@ -1,6 +1,6 @@
 # STS Lab: Gemini 3.8 Live Speech-to-Speech Architecture
 
-Standalone implementation of Saara — Roxstar's AI Onboarding & Musical Buddy voice host powered directly by **Google Gemini 3.8 Live API** (Speech-to-Speech) and **LiveKit Cloud**.
+Standalone implementation of Simran — Roxstar's AI Onboarding & Musical Buddy voice host powered directly by **Google Gemini 3.8 Live API** (Speech-to-Speech) and **LiveKit Cloud**.
 
 ---
 
@@ -12,7 +12,7 @@ STS Lab Standalone
 ├── config.py              # Configuration & Voice Setting (Leda, 24kHz Opus)
 ├── token_server.py        # Token Dispatcher on http://127.0.0.1:8001
 ├── worker.py              # LiveKit Agent Worker (native Gemini Live multimodal session)
-├── prompt.py              # Saara 22yo South Delhi Persona & Conversational Funnels
+├── prompt.py              # Simran 22yo South Delhi Persona & Conversational Funnels
 ├── onboarding.py          # State Machine, User Discovery Profile & Stage Tracking
 ├── run_sts.py             # Concurrent Supervisor (Token Server + Worker)
 ├── requirements.txt       # Pinned Python Dependencies
@@ -22,7 +22,7 @@ STS Lab Standalone
 │   ├── WORKFLOW.md        # End-to-end onboarding workflows & sequence diagrams
 │   ├── TASKS.md           # Implementation progress & roadmap tracker
 │   └── CHANGELOG.md       # Chronological record of major changes
-├── tests/                 # 21-scenario Pytest Suite
+├── tests/                 # 23-scenario Pytest Suite
 └── web/                   # 2-Pane Clean React/TypeScript Studio Stage
 ```
 
@@ -76,14 +76,14 @@ python run_sts.py
 ```
 This launches:
 * **STS Token Server**: `http://127.0.0.1:8001`
-* **LiveKit Agent Worker**: `sts-saraah` connected to LiveKit Cloud.
+* **LiveKit Agent Worker**: `sts-simran` connected to LiveKit Cloud.
 
 ### 2. Launch Web Stage
 In terminal 2:
 ```bash
 npm --prefix web run dev
 ```
-Open **`http://127.0.0.1:5175/`** in your browser to interact with Saara on live voice.
+Open **`http://127.0.0.1:5175/`** in your browser to interact with Simran on live voice.
 
 ---
 
@@ -92,5 +92,5 @@ Open **`http://127.0.0.1:5175/`** in your browser to interact with Saara on live
 ```bash
 pytest tests/ -v
 ```
-All 21 user scenarios and state tests will execute and pass.
+All 23 user scenarios and state tests will execute and pass.
 

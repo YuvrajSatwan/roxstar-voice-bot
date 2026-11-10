@@ -1,5 +1,5 @@
 # ==============================================================================
-# Multi-Stage Dockerfile for RoxStar Saara STS Lab
+# Multi-Stage Dockerfile for RoxStar Simran STS Lab
 # Builds React frontend and bundles Python LiveKit Agent + Token Server
 # ==============================================================================
 

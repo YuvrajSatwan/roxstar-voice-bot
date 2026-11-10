@@ -1,6 +1,6 @@
 """Dedicated Token Server for STS Lab (Port 8001).
 
-Issues tokens for the Gemini 3.8 Live Speech-to-Speech test room and dispatches 'sts-saraah'.
+Issues tokens for the Gemini 3.8 Live Speech-to-Speech test room and dispatches 'sts-simran'.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ _ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz"
 
 def generate_sts_room_code() -> str:
     suffix = "".join(secrets.choice(_ALPHABET) for _ in range(4))
-    return f"sts-saara-{suffix}"
+    return f"sts-simran-{suffix}"
 
 
 def create_participant_token(settings: StsSettings, *, identity: str, room: str) -> str:
@@ -152,7 +152,7 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "sts-token-server",
-                    "persona": "Saara",
+                    "persona": "Simran",
                     "model": self.settings.model,
                     "voice": self.settings.voice,
                 },
@@ -196,7 +196,7 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service": "sts-token-server",
-                    "persona": "Saara",
+                    "persona": "Simran",
                     "model": self.settings.model,
                     "voice": self.settings.voice,
                 },
@@ -230,7 +230,7 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                         lk, room=room, agent_name=self.settings.agent_name
                     ),
                 )
-                self._send_json(HTTPStatus.CREATED, {"room": room, "title": "Saraah STS Lab"})
+                self._send_json(HTTPStatus.CREATED, {"room": room, "title": "Simran STS Lab"})
                 return
 
             # POST /token
@@ -254,7 +254,7 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                     "token": token,
                     "url": self.settings.livekit_url,
                     "room": room,
-                    "persona": "Saara",
+                    "persona": "Simran",
                     "model": self.settings.model,
                     "voice": self.settings.voice,
                 },
@@ -273,7 +273,7 @@ def main() -> None:
     host = settings.host
     port = settings.port
     server = ThreadingHTTPServer((host, port), StsTokenHandler)
-    logger.info("Saraah STS Token Server running on http://%s:%d", host, port)
+    logger.info("Simran STS Token Server running on http://%s:%d", host, port)
     server.serve_forever()
 
 

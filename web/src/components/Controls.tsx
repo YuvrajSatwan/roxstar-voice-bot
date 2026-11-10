@@ -70,7 +70,7 @@ export const Controls: React.FC<ControlsProps> = ({
           {isConnecting ? (
             <>
               <Radio size={16} className="spin-icon" />
-              <span>Connecting to Saraah…</span>
+              <span>Connecting to Simran…</span>
             </>
           ) : (
             <>

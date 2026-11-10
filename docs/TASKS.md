@@ -9,12 +9,12 @@
 
 ### Core Architecture & Media Pipeline
 - [x] **Direct Speech-to-Speech (S2S) Engine**: Integrated Google Gemini 3.8 Live API (`gemini-3.8-live`) via `livekit-plugins-google.realtime.RealtimeModel` with native bidirectional 24kHz PCM audio streaming.
-- [x] **LiveKit Agent Worker**: Implemented prewarmed worker (`worker.py`) connecting as `sts-saraah` with `JobExecutorType.THREAD` and `num_idle_processes=1`.
+- [x] **LiveKit Agent Worker**: Implemented prewarmed worker (`worker.py`) connecting as `sts-simran` with `JobExecutorType.THREAD` and `num_idle_processes=1`.
 - [x] **Concurrent Supervisor**: Implemented `run_sts.py` to concurrently spawn, monitor, and auto-restart `token_server.py` and `worker.py`.
 - [x] **Dedicated Token Server**: Built HTTP server on port 8001 handling `/token`, `/rooms`, `/health`, and `/duets` with parallel LiveKit room prep and agent dispatch.
 
 ### Persona & Conversational Design
-- [x] **Saara 22yo South Delhi Persona**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), and Trade Rule.
+- [x] **Simran 22yo South Delhi Persona**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), and Trade Rule.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
 - [x] **Anti-Chit-Chat Excuse Engine**: Implemented strict 2-decline exit rule using authentic personal excuses (Swiggy, chai, client ping, battery low) to gracefully close sessions under 25 words.
 - [x] **Silent Tool Execution**: Defined 4 function tools (`save_profile`, `check_available_duets`, `navigate_to_duet`, `navigate_to_recording`) operating silently without conversational announcements.
@@ -28,13 +28,13 @@
 - [x] **Virtual Coin Rewards**: Added 50 welcome coin bonus grant and gift-sending logic (`roxstar.coins_awarded`, `roxstar.coin_balance`).
 
 ### Frontend Web Studio
-- [x] **2-Pane Studio UI**: Built modern React 19 + TypeScript studio with live audio visualizer (`SaaraOrb`, `AudioVisualizer`), stage bar, controls, and telemetry pill.
-- [x] **Live Transcripts & State Sync**: Implemented scrolling transcript view for user and Saara turns, backed by WebRTC DataPackets.
+- [x] **2-Pane Studio UI**: Built modern React 19 + TypeScript studio with live audio visualizer (`SimranPresence`, `AudioVisualizer`), stage bar, controls, and telemetry pill.
+- [x] **Live Transcripts & State Sync**: Implemented scrolling transcript view for user and Simran turns, backed by WebRTC DataPackets.
 - [x] **Discovery Badges**: Added real-time visual tags displaying captured user attributes.
 - [x] **One-Click Batch Launchers**: Added `start_backend.bat` and `start_web.bat` for quick local startup on Windows.
 
 ### Test Coverage & Verification
-- [x] **Automated Test Suite**: Built 21 tests covering all unit functionality and 12 onboarding user journey scenarios (`tests/test_sts_onboarding.py`, `tests/test_sts_onboarding_scenarios.py`).
+- [x] **Automated Test Suite**: Built 23 tests covering all unit functionality and 14 onboarding user journey scenarios (`tests/test_sts_onboarding.py`, `tests/test_sts_onboarding_scenarios.py`).
 
 ### Deployment & Containerization
 - [x] **Production Multi-Stage Dockerfile**: Multi-stage build compiling React 19 frontend and running Python 3.11 STS supervisor on port 8001/`$PORT`.
@@ -59,7 +59,7 @@
 - [ ] **Database Adapter Layer**: Abstract `UserProfileStore` into an interface supporting PostgreSQL / Redis alongside local JSON.
 
 ### Medium Priority
-- [ ] **Audio Barge-In Client Optimization**: Optimize client-side Web Audio buffer discarding when the user interrupts Saara mid-sentence.
+- [ ] **Audio Barge-In Client Optimization**: Optimize client-side Web Audio buffer discarding when the user interrupts Simran mid-sentence.
 - [ ] **Bilingual Audio Latency Benchmark Dashboard**: Add visual charts to `LatencyCard` logging TTFA (ms) percentiles (p50, p95) over extended voice sessions.
 - [ ] **Session Resumption Support**: Implement Gemini Live session resumption token caching so temporary network drops do not reset onboarding progress.
 

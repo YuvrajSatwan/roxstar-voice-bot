@@ -1,4 +1,4 @@
-"""Automated test suite validating all 11 required scenarios for Saara's Onboarding & Guidance Prototype.
+"""Automated test suite validating all scenarios for Simran's Onboarding & Guidance Prototype.
 
 Scenarios covered:
 1. New user providing name and music preferences.
@@ -12,12 +12,17 @@ Scenarios covered:
 9. User when no duet rooms are available.
 10. User asking how to earn free coins.
 11. Returning user who has already completed onboarding.
+12. User asked to join duet/solo 2-3 times but keeps chatting.
+13. User says they cannot sing -> two attempts encouragement.
+14. User initially hesitates but says YES after convincing.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from sts_lab.onboarding import (
+    SIMRAN_DUET_HANDOFF_EXCUSES,
+    SIMRAN_SIGNOFF_EXCUSES,
     SAARA_DUET_HANDOFF_EXCUSES,
     SAARA_SIGNOFF_EXCUSES,
     DuetRoom,
@@ -34,7 +39,7 @@ def test_scenario_1_new_user_name_and_music() -> None:
     tracker = OnboardingTracker(profile=profile)
 
     assert not tracker.profile.is_returning
-    # Saara discovers name and music taste
+    # Simran discovers name and music taste
     tracker.save_field("name", "Rahul")
     tracker.save_field("music_taste", "Arijit Singh")
     tracker.save_field("music_taste", "Retro 90s")
@@ -240,7 +245,7 @@ def test_scenario_11_returning_user_already_onboarded(tmp_path: Path) -> None:
 
 
 def test_scenario_12_user_keeps_chatting_after_multiple_nudges() -> None:
-    """12. User asked to join duet/solo 2-3 times but keeps chatting -> Saara gives realistic excuse and signs off."""
+    """12. User asked to join duet/solo 2-3 times but keeps chatting -> Simran gives realistic excuse and signs off."""
     registry = DuetRoomRegistry([
         DuetRoom(room_id="duet-1", title="Jam", genre="Romantic", host_name="Aman", song_title="Pehla Nasha")
     ])
@@ -263,14 +268,15 @@ def test_scenario_12_user_keeps_chatting_after_multiple_nudges() -> None:
     assert "SIGN-OFF STATUS" in summary
     assert "realistic personal excuse" in summary
 
-    # Verify random excuse picker returns one of Saara's authentic excuses
+    # Verify random excuse picker returns one of Simran's authentic excuses
     excuse = tracker.get_random_excuse()
+    assert excuse in SIMRAN_SIGNOFF_EXCUSES
     assert excuse in SAARA_SIGNOFF_EXCUSES
     assert any(keyword in excuse.lower() for keyword in ["client", "mummy", "swiggy", "parcel", "laptop", "friend", "deadline", "ritika"])
 
 
 def test_scenario_13_user_says_cannot_sing_two_attempt_encouragement() -> None:
-    """13. User says they cannot sing -> Saara encourages twice (Duet bridge, then solo/comment promise) before signing off."""
+    """13. User says they cannot sing -> Simran encourages twice (Duet bridge, then solo/comment promise) before signing off."""
     registry = DuetRoomRegistry([
         DuetRoom(room_id="duet-romantic", title="Romantic Jam", genre="Romantic", host_name="Rhea", song_title="Tum Hi Ho")
     ])
@@ -298,18 +304,19 @@ def test_scenario_13_user_says_cannot_sing_two_attempt_encouragement() -> None:
     summary2 = tracker.get_summary_context()
     assert "SIGN-OFF STATUS (CRITICAL)" in summary2
     excuse = tracker.get_random_excuse()
+    assert excuse in SIMRAN_SIGNOFF_EXCUSES
     assert excuse in SAARA_SIGNOFF_EXCUSES
 
 
 def test_scenario_14_user_says_yes_after_convincing() -> None:
-    """14. User initially hesitates but says YES after convincing -> Saara celebrates and hands off stage cleanly."""
+    """14. User initially hesitates but says YES after convincing -> Simran celebrates and hands off stage cleanly."""
     registry = DuetRoomRegistry([
         DuetRoom(room_id="duet-romantic", title="Romantic Jam", genre="Romantic", host_name="Rhea", song_title="Tum Hi Ho")
     ])
     profile = UserDiscoveryProfile(user_id="user_convinced", name="Aakash", music_taste=["Romantic"])
     tracker = OnboardingTracker(profile=profile, duet_registry=registry)
 
-    # User hesitates, Saara suggests duet
+    # User hesitates, Simran suggests duet
     can_suggest, _, room = tracker.suggest_duet()
     assert can_suggest
     assert room is not None
@@ -317,12 +324,14 @@ def test_scenario_14_user_says_yes_after_convincing() -> None:
 
     # User says YES ("Haan chalo try karte hain") -> duet handoff celebration in natural Hindi
     duet_handoff = tracker.get_random_duet_handoff_reason()
+    assert duet_handoff in SIMRAN_DUET_HANDOFF_EXCUSES
     assert duet_handoff in SAARA_DUET_HANDOFF_EXCUSES
     assert any(w in duet_handoff for w in ["Yeh hui na baat", "Zabardast", "Sahi hai", "Kya baat"])
 
     # Bot marks turned off for duet
     tracker.mark_bot_turned_off("User entered live duet stage")
     assert tracker.bot_turned_off
+    assert tracker.is_simran_away
     assert tracker.is_saara_away
 
 

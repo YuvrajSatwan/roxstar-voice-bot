@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-STS_AGENT_NAME = os.getenv("STS_AGENT_NAME", "sts-saraah").strip()
+STS_AGENT_NAME = os.getenv("STS_AGENT_NAME", "sts-simran").strip()
 STS_MODEL = os.getenv("STS_MODEL", "gemini-3.8-live").strip()
 STS_VOICE = os.getenv("STS_VOICE", "Leda").strip()
 STS_PORT = int(os.getenv("PORT", os.getenv("STS_PORT", "8001")))

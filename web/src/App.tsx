@@ -6,12 +6,14 @@ import { Controls } from './components/Controls';
 import { TooltipOverlay } from './components/TooltipOverlay';
 import { KaraokeStageBar } from './components/KaraokeStageBar';
 import { DiscoveryProfileBadge } from './components/DiscoveryProfileBadge';
-import { Coins, MessageSquare, Mic, Music2, Sparkles, Zap } from 'lucide-react';
+import { NaturalLaughDemo } from './components/NaturalLaughDemo';
+import { Coins, MessageSquare, Mic, Music2, Smile, Sparkles, Zap } from 'lucide-react';
 
 export function App() {
   const [userName, setUserName] = useState('Rahul');
   const [stageMode, setStageMode] = useState<'lounge' | 'duet' | 'solo'>('lounge');
   const [mobileTab, setMobileTab] = useState<'stage' | 'chat'>('stage');
+  const [showLaughLab, setShowLaughLab] = useState(false);
 
   const {
     session,
@@ -39,6 +41,8 @@ export function App() {
     triggerCoinsPopup,
     rejoinSimran,
     sendDuetGift,
+    laughEnabled,
+    setLaughMode,
     connect,
     disconnect,
     toggleMute,
@@ -104,6 +108,17 @@ export function App() {
             <span>{ttfa}ms</span>
             <span className="telemetry-pill__sub">S2S</span>
           </div>
+
+          {/* Natural Laugh Lab & Demo Pill */}
+          <button
+            type="button"
+            onClick={() => setShowLaughLab(true)}
+            className={`room-nav__laugh-btn ${laughEnabled ? 'room-nav__laugh-btn--on' : 'room-nav__laugh-btn--off'}`}
+            title="Open Simran Natural Laugh Lab: Listen to demo samples or turn laugh off"
+          >
+            <Smile size={13} className="laugh-pill__icon" />
+            <span>Laugh {laughEnabled ? 'ON' : 'OFF'}</span>
+          </button>
         </div>
       </header>
 
@@ -220,6 +235,15 @@ export function App() {
           />
         </section>
       </main>
+
+      {/* Natural Laugh Lab & Demo Modal */}
+      <NaturalLaughDemo
+        isOpen={showLaughLab}
+        onClose={() => setShowLaughLab(false)}
+        laughEnabled={laughEnabled}
+        onToggleLaugh={setLaughMode}
+        isConnected={isConnected}
+      />
     </div>
   );
 }

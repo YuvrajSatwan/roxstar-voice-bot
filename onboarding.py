@@ -341,6 +341,7 @@ class OnboardingTracker:
         self.is_simran_away = False
         self.simran_away_reason: str | None = None
         self.bot_turned_off = False
+        self.laugh_enabled = True
 
     @property
     def is_saara_away(self) -> bool:
@@ -361,6 +362,11 @@ class OnboardingTracker:
     def is_occupation_generic(self) -> bool:
         """Returns True if the discovered occupation is generic and warrants a curious follow-up."""
         return is_generic_occupation(self.profile.occupation)
+
+    def set_laugh_mode(self, enabled: bool) -> None:
+        """Enables or disables Simran's natural laughter based on user preference."""
+        self.laugh_enabled = enabled
+        logger.info("Simran laugh mode set: enabled=%s", enabled)
 
     def award_welcome_coins(self, amount: int = 50) -> tuple[int, bool]:
         """Awards welcome coins once to new users."""
@@ -645,6 +651,18 @@ class OnboardingTracker:
 
         if not self.profile.coins_explained:
             lines.append("COIN MISSION: Share the free daily coins & gifting insider tip before ending.")
+
+        if not self.laugh_enabled:
+            lines.append(
+                "LAUGHTER SETTING (CRITICAL): Laughter is TURNED OFF by user. "
+                "Speak warmly, politely, and playfully, but strictly DO NOT chuckle, giggle, or emit 'haha'/'hehe' tokens. "
+                "Keep a smooth, calm, smiling conversational tone."
+            )
+        else:
+            lines.append(
+                "LAUGHTER SETTING: Natural laughter is ON. "
+                "Chuckle ('haha yaar') and giggle ('hehe') spontaneously when amused or teasing (~25% of playful turns)."
+            )
 
         if self.action_nudge_count == 1 and not self.should_sign_off():
             lines.append(

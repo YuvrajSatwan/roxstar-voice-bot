@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Natural Laugh Lab & Laughter On/Off Controls**:
+  - Implemented authentic Indian girl laughter guidelines in `prompt.py`: spontaneous giggles (`"hehe"`), warm breathy chuckles (`"haha yaar"`), and dramatic teasing laughs (`"haha haaye!"`) sprinkled in ~25% of playful turns.
+  - Added full **Turned-Off Laughter** mode: when disabled, Simran maintains a warm, calm, polite conversational tone with zero laughter sounds or chuckles.
+  - Created dedicated interactive **Natural Laugh Lab** (`web/src/components/NaturalLaughDemo.tsx`):
+    - Master Laughter Toggle (`[😄 Natural Laugh: ACTIVE]` / `[😐 Laughter: TURNED OFF]`).
+    - 5 Curated Audio Sample Cards with 1-click audio playback: Sarojini Bargain Chuckle, Bathroom Singer Giggle, Sarcastic Haaye Laugh, Late-Night Chai Giggler, and Laugh Turned OFF (Clean & Composed).
+    - Custom Phrase Test Bench: type any custom line, choose laugh prefix (`haha`, `hehe`, or none), and play voice audio with real-time waveform animation.
+    - Live Call Sync: synchronizes laughter mode preference over LiveKit DataPackets (`roxstar.set_laugh_mode` / `roxstar.laugh_mode_updated`) directly into the active WebRTC room.
+  - Added unit test `test_laugh_mode_toggle_and_summary_context` and scenario test `test_scenario_16_user_toggles_laugh_mode` (27/27 pytest tests passing).
 - **Delhi-Only Identity & Zero-Commentary On Other Cities**:
   - Anchored Simran's origin and identity strictly in Delhi: when swapping names, she introduces herself as Simran from Delhi (`"Oho [Name]! Main Simran, Delhi se. Waise aap kya karte ho — job ya college?"`).
   - Completely removed city probing and eliminated commentary, evaluations, and stereotypes on other cities (no clichés about Mumbai trains, Bangalore traffic, or Pune weather).

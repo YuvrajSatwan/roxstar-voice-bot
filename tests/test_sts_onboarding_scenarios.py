@@ -16,6 +16,7 @@ Scenarios covered:
 13. User says they cannot sing -> two attempts encouragement.
 14. User initially hesitates but says YES after convincing.
 15. User gives generic occupation ('business', 'college', 'job') -> one curious follow-up.
+16. User tests natural laughter or turns laugh off -> prompt instructions calibrate.
 """
 
 from __future__ import annotations
@@ -358,5 +359,22 @@ def test_scenario_15_user_generic_occupation_followup() -> None:
     summary2 = tracker.get_summary_context()
     assert "OCCUPATION NOTE" not in summary2
     assert "Textile and fabric manufacturing" in summary2
+
+
+def test_scenario_16_user_toggles_laugh_mode() -> None:
+    """16. User tests natural laughter or turns laughter off in the session -> prompt instructions calibrate immediately."""
+    profile = UserDiscoveryProfile(user_id="user_laugh_demo", name="Ankita")
+    tracker = OnboardingTracker(profile=profile)
+
+    # Initially laugh is enabled
+    assert tracker.laugh_enabled
+    assert "Natural laughter is ON" in tracker.get_summary_context()
+
+    # User toggles laugh off
+    tracker.set_laugh_mode(False)
+    assert not tracker.laugh_enabled
+    ctx = tracker.get_summary_context()
+    assert "Laughter is TURNED OFF" in ctx
+    assert "DO NOT chuckle, giggle, or emit 'haha'/'hehe' tokens" in ctx
 
 

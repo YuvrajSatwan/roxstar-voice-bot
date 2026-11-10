@@ -14,6 +14,7 @@
 - [x] **Dedicated Token Server**: Built HTTP server on port 8001 handling `/token`, `/rooms`, `/health`, and `/duets` with parallel LiveKit room prep and agent dispatch.
 
 ### Persona & Conversational Design
+- [x] **Natural Laughter & Laughter-Off Mode**: Authored authentic Hindi laughter guidelines in `prompt.py` (spontaneous giggles `"hehe"`, warm breathy chuckles `"haha yaar"`, dramatic teasing laughs `"haha haaye!"`). Added full Turned-Off Laughter mode in `OnboardingTracker` allowing users to suppress laughter for a calm, composed tone.
 - [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Explicitly eliminated city probing and prohibited commentary, critiques, or clichés about other cities.
 - [x] **Curious Follow-Up on Generic Occupation Answers**: Engineered natural conversation deepening when users give generic occupation responses (e.g., "business", "job", "college", "student", "freelance", "startup"). Instead of instantly jumping to hobbies or music, Simran asks exactly one natural, curious follow-up ("Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai?") before sharing her design work and advancing. Backed by `is_generic_occupation()` detection and dynamic LLM context guidance in `OnboardingTracker`.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
@@ -29,6 +30,7 @@
 - [x] **Virtual Coin Rewards**: Added 50 welcome coin bonus grant and gift-sending logic (`roxstar.coins_awarded`, `roxstar.coin_balance`).
 
 ### Frontend Web Studio
+- [x] **Interactive Natural Laugh Lab & Controls Modal**: Implemented dedicated Natural Laugh Lab (`NaturalLaughDemo.tsx`) featuring master laughter toggling (`Natural Laugh ON` vs `Turned OFF`), 5 curated Hindi voice sample cards with audio playback (Sarojini Bargain Chuckle, Bathroom Singer Giggle, Sarcastic Haaye Laugh, Late-Night Chai Giggler, and Laugh Turned OFF), custom phrase speech tester, and live WebRTC session synchronization (`roxstar.set_laugh_mode`).
 - [x] **Dynamic Procedural 3D Simplex Noise & Non-Repetitive Orb Styles**: Explored and engineered non-repetitive organic motion for the 12,000 particle Speaking Orb using procedural 3D simplex curl turbulence (`snoise`) and non-linear orbital dynamics. Curated 3 distinctive visual styles:
   - **`✨ Astral` (Astral Stardust - Recommended Best)**: Deep cosmic stardust cloud with fluid turbulence, StarMaker Royal Purple core shifting to vibrant Hot Pink with bright Electric Cyan acoustic sparkles and upward traveling syllable rings.
   - **`🌟 Plasma` (Bioluminescent Plasma Core)**: Energetic solar/plasma orb with coronal mass ejections and radiant flares reacting to vocal dynamics.

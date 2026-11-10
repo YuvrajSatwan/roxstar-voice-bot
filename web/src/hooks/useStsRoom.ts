@@ -81,6 +81,13 @@ export function useStsRoom() {
   const [simranAwayReason, setSimranAwayReason] = useState<string | null>(null);
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsAwardedEvent, setCoinsAwardedEvent] = useState<CoinsAwardedEvent | null>(null);
+  const [laughEnabled, setLaughEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('roxstar_laugh_enabled');
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
 
   const roomRef = useRef<Room | null>(null);
   const analyserCleanupRef = useRef<(() => Promise<void>) | null>(null);
@@ -270,6 +277,10 @@ export function useStsRoom() {
               if (typeof msg.balance === 'number') {
                 setCoinBalance(msg.balance);
               }
+            } else if (msg.type === 'roxstar.laugh_mode_updated') {
+              if (typeof msg.enabled === 'boolean') {
+                setLaughEnabled(msg.enabled);
+              }
             } else if (msg.type === 'roxstar.sts.transcript') {
               const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               const incomingText = String(msg.text || '').trim();
@@ -458,6 +469,31 @@ export function useStsRoom() {
     [emitAppEvent],
   );
 
+  const setLaughMode = useCallback(
+    async (enabled: boolean) => {
+      setLaughEnabled(enabled);
+      try {
+        localStorage.setItem('roxstar_laugh_enabled', String(enabled));
+      } catch {}
+      if (roomRef.current && roomRef.current.state === ConnectionState.Connected) {
+        const payload = JSON.stringify({
+          type: 'roxstar.set_laugh_mode',
+          enabled,
+          timestamp: Date.now(),
+        });
+        try {
+          await roomRef.current.localParticipant.publishData(new TextEncoder().encode(payload), {
+            reliable: true,
+          });
+          console.log('Sent roxstar.set_laugh_mode data packet:', enabled);
+        } catch (err) {
+          console.warn('Could not send set_laugh_mode packet:', err);
+        }
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     return () => {
       void cleanup();
@@ -494,6 +530,8 @@ export function useStsRoom() {
     rejoinSimran,
     rejoinSaara,
     sendDuetGift,
+    laughEnabled,
+    setLaughMode,
     connect,
     disconnect: cleanup,
     toggleMute,

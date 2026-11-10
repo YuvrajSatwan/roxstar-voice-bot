@@ -484,6 +484,15 @@ async def entrypoint(ctx: JobContext) -> None:
                             user_input=f"{text}\n[SYSTEM: Natural, warm, and friendly! Speak with an unhurried, smiling tone. Keep reply in natural conversational sweet spot (12-22 words): 1 genuine reaction + 1 relatable detail or question. Let the topic breathe!]"
                         )
 
+            elif msg_type == "roxstar.set_laugh_mode":
+                enabled = bool(data.get("enabled", True))
+                tracker.set_laugh_mode(enabled)
+                logger.info("LiveKit DataPacket set_laugh_mode received: enabled=%s", enabled)
+                publish_data({
+                    "type": "roxstar.laugh_mode_updated",
+                    "enabled": enabled,
+                })
+
             elif msg_type == "roxstar.app_event":
                 action = str(data.get("action", "")).strip()
                 logger.info("Received app event: %s, data: %s", action, data)

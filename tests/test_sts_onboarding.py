@@ -191,3 +191,26 @@ def test_generic_occupation_detection_and_followup_hint() -> None:
     assert "OCCUPATION NOTE" not in summary3
     assert "Textile exporter in Surat" in summary3
 
+
+def test_laugh_mode_toggle_and_summary_context() -> None:
+    profile = UserDiscoveryProfile(user_id="user_laugh_test")
+    tracker = OnboardingTracker(profile=profile)
+
+    # 1. Default laugh mode is ON
+    assert tracker.laugh_enabled is True
+    summary_on = tracker.get_summary_context()
+    assert "LAUGHTER SETTING: Natural laughter is ON" in summary_on
+
+    # 2. Turn laugh OFF
+    tracker.set_laugh_mode(False)
+    assert tracker.laugh_enabled is False
+    summary_off = tracker.get_summary_context()
+    assert "LAUGHTER SETTING (CRITICAL): Laughter is TURNED OFF" in summary_off
+    assert "DO NOT chuckle, giggle, or emit 'haha'/'hehe' tokens" in summary_off
+
+    # 3. Restore laugh ON
+    tracker.set_laugh_mode(True)
+    assert tracker.laugh_enabled is True
+    summary_restored = tracker.get_summary_context()
+    assert "LAUGHTER SETTING: Natural laughter is ON" in summary_restored
+

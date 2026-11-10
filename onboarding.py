@@ -88,19 +88,19 @@ def is_generic_occupation(occupation: str | None) -> bool:
 # Simran's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
 SIMRAN_SIGNOFF_EXCUSES: list[str] = [
     "Arre door bell baji, lagta hai Swiggy wala aa gaya! Chalti hoon main, bye!",
-    "Mummy chai ke liye chilla rahi hain! Main bhaagi, tum tab tak gaana zaroor try karna, bye!",
+    "Mummy chai ke liye chilla rahi hain! Main bhaagi, aap tab tak gaana zaroor try karna, bye!",
     "Client ka urgent ping aa gaya, design badalna hai! Nikalti hoon, baad mein baat karte hain, bye!",
-    "Haaye laptop 4 percent pe aa gaya aur charger doosre kamre mein hai! Bhaagi main, bye!",
+    "Laptop 4 percent pe aa gaya aur charger doosre kamre mein hai! Bhaagi main, bye!",
     "Ritika meri friend ka phone aa raha hai kab se! Mujhe nikalna padega, next time pakka jam karenge, bye!",
-    "Yaar deadline yaad aa gayi achaanak! Chalti hoon, tum gaake dikhana, bye!",
+    "Deadline yaad aa gayi achaanak! Chalti hoon, aap gaake dikhana, bye!",
 ]
 
 # Enthusiastic natural Hindi handoff lines when user agrees to join a duet (strictly under 25 words)
 SIMRAN_DUET_HANDOFF_EXCUSES: list[str] = [
-    "Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki tum dono mast jam karo. Aag laga dena, bye!",
+    "Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki aap dono mast jam karein. Aag laga dena, bye!",
     "Zabardast choice! Duet stage ready hai, dil khol ke gaao aur rock karna. All the best, bye bye!",
     "Sahi hai yaar! Room ready ho gaya screen pe, main mic chhodti hoon. Poori aag laga dena, bye!",
-    "Kya baat hai! Duet stage khul gaya, ab tum dono milke dhoom machao. All the best, bye!",
+    "Kya baat hai! Duet stage khul gaya, ab aap dono milke dhoom machao. All the best, bye!",
 ]
 
 # Enthusiastic natural Hindi handoff lines when user agrees to solo recording (strictly under 25 words)

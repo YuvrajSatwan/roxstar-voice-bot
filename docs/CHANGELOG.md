@@ -9,6 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **True StarMaker Brand Aesthetics (Clean White Canvas, Royal Purple & Hot Pink)**:
+  - Redesigned the entire web studio UI under Lead UI/UX direction to adhere to StarMaker's authentic brand color balance: 60% Pure White canvas (`#ffffff`), 30% Royal/Electric Purple (`#7c3aed`), and 10% High-Energy Hot Pink (`#ff2e93`), with Golden Amber (`#f59e0b`) for coin wallets and rewards.
+  - Updated all cards, modals, composer inputs, badges, and performer containers to pure white surfaces with soft lavender depth (`rgba(124, 58, 237, 0.12)`) and high-contrast obsidian-plum typography (`#1f1633`).
+  - Preserved high-contrast dark monitor frames for synchronized teleprompter screens (`#18112c`) so glowing lyrics and the animated bouncing ball (`🎵`) stand out with maximum legibility.
+- **Speaking Orb (Signal/Aqualang Specification)**:
+  - Created [`web/src/components/SpeakingOrb.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SpeakingOrb.tsx) and standalone zero-dependency [`web/public/speaking-orb.js`](file:///y:/roxstar/sts_lab/web/public/speaking-orb.js):
+    - 12,000 Fibonacci sphere WebGL particles on desktop (6,000 on mobile/touch).
+    - Custom vertex & fragment shaders with StarMaker pink-to-purple additive luminous glow.
+    - Real-time vocal swell responding to audio amplitude.
+    - Traveling lit rings from bottom to top with every syllable during speech.
+    - Particle-landed live captions with `aria-live="polite"` and word-by-word glowing highlights.
+    - Full Web Component `<speaking-orb>` API supporting `say(text, {audio})`, `listen()`, `state`, `level`, `rest`, and `end` events.
+  - Integrated `SpeakingOrb` into [`SimranPresence.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SimranPresence.tsx) and [`SimranOrb.tsx`](file:///y:/roxstar/sts_lab/web/src/components/SimranOrb.tsx).
+
 - **StarMaker-Inspired Live Karaoke Stage Experience**:
   - Transformed the web studio UI into an immersive StarMaker karaoke atmosphere with deep obsidian stage background (`#090714`), neon violet and pink accents, and high-energy interactive components.
   - **Seamless Stage Redirection**: When user clicks "Join Duet" or "Solo Record" (or when Simran directs via `navigatedDuetRoom` or `navigatedSoloRecording`), the interface redirects directly into the full-featured StarMaker Live Duet Stage or Solo Recording Studio.

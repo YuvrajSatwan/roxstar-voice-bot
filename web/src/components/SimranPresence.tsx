@@ -1,5 +1,5 @@
 import React from 'react';
-import { AiGlyph } from './AiGlyph';
+import { SpeakingOrb } from './SpeakingOrb';
 import { Coffee, Mic, MicOff, RotateCcw, Sparkles, User } from 'lucide-react';
 
 export interface SimranPresenceProps {
@@ -15,6 +15,7 @@ export interface SimranPresenceProps {
   isSaaraAway?: boolean;
   saaraAwayReason?: string | null;
   onRejoinSaara?: () => void;
+  caption?: string | null;
 }
 
 const STATE_LABELS: Record<'idle' | 'listening' | 'thinking' | 'speaking', string> = {
@@ -37,6 +38,7 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
   isSaaraAway,
   saaraAwayReason,
   onRejoinSaara,
+  caption,
 }) => {
   const currentState = isConnected ? state : 'idle';
   const label = isConnected ? STATE_LABELS[currentState] : 'Offline';
@@ -76,12 +78,14 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
         </div>
       ) : (
         <>
-          {/* Central Living Presence Glyph */}
+          {/* Central Living Presence Speaking Orb (StarMaker Pink-to-Purple 12,000 Particles) */}
           <div className="stage-glyph-center">
-            <AiGlyph state={currentState} audioLevel={audioLevel} size="lg" />
-            {currentState === 'speaking' && (
-              <div className="stage-glyph-halo" />
-            )}
+            <SpeakingOrb
+              state={currentState}
+              audioLevel={audioLevel}
+              size="lg"
+              caption={currentState === 'speaking' ? caption : undefined}
+            />
           </div>
 
           {/* Identity & Status */}

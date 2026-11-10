@@ -176,6 +176,7 @@ export function App() {
               isSimranAway={isSimranAway}
               simranAwayReason={simranAwayReason}
               onRejoinSimran={rejoinSimran}
+              caption={latestSimranTranscript}
             />
           )}
 

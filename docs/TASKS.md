@@ -28,6 +28,8 @@
 - [x] **Virtual Coin Rewards**: Added 50 welcome coin bonus grant and gift-sending logic (`roxstar.coins_awarded`, `roxstar.coin_balance`).
 
 ### Frontend Web Studio
+- [x] **StarMaker True Brand Aesthetic (White Canvas + Royal Purple + Hot Pink)**: Redesigned the entire web studio UI adopting StarMaker's authentic color hierarchy: 60% pure white canvas (`#ffffff`), 30% royal/electric purple (`#7c3aed`), and 10% high-energy hot pink (`#ff2e93`), with golden accents for coin rewards. Replaced legacy dark modals and cards with radiant white surfaces, lavender borders, and crisp high-contrast obsidian-plum typography.
+- [x] **Speaking Orb (12,000 Particle WebGL Voice Assistant Face)**: Implemented the complete Aqualang/Signal Speaking Orb specification in `SpeakingOrb.tsx` and standalone `web/public/speaking-orb.js`: 12,000 particles (6,000 touch), real-time voice swell, traveling bottom-to-top lit rings on syllables, particle-landed live captions with `aria-live="polite"` and word-by-word highlights, and full `<speaking-orb>` Web Component API (`say(text, {audio})`, `listen()`, `state`, `level`, `rest`, and `end` events).
 - [x] **StarMaker-Inspired Live Stage Experience**: Transformed web studio into a polished StarMaker karaoke experience with deep obsidian stage atmosphere (`#090714`), glassmorphic panels, and glowing neon accents.
 - [x] **Seamless Live Duet & Solo Stage Redirection**: Seamlessly redirects the main view to the StarMaker Live Stage or Solo Recording Studio upon joining or receiving navigation triggers.
 - [x] **Dynamic Free Coin Reward Celebration**: Auto-detects coin mentions in Simran's voice speech and triggers a celebratory StarMaker Gold Coin popup with spinning 3D coin, sunburst rays, and instant bonus claiming.

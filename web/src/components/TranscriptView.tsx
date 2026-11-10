@@ -79,8 +79,10 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({
           </div>
         ) : (
           <ol className="conversation-list" role="log" aria-live="polite">
-            {transcripts.map((t) => {
-              if (t.speaker === 'System') {
+            {transcripts
+              .filter((t) => t.text && t.text.trim() !== '---' && t.text.trim() !== '--' && t.text.trim() !== '...' && t.text.trim() !== '-')
+              .map((t) => {
+                if (t.speaker === 'System') {
                 return (
                   <li key={t.id} className="transcript-line transcript-line--system">
                     <Sparkles size={12} className="system-icon" />

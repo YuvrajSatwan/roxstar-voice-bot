@@ -83,7 +83,7 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
             <SpeakingOrb
               state={currentState}
               audioLevel={audioLevel}
-              size="lg"
+              size="md"
               caption={currentState === 'speaking' ? caption : undefined}
             />
           </div>

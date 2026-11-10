@@ -273,7 +273,7 @@ export function useStsRoom() {
             } else if (msg.type === 'roxstar.sts.transcript') {
               const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               const incomingText = String(msg.text || '').trim();
-              if (!incomingText) return;
+              if (!incomingText || incomingText === '---' || incomingText === '--' || incomingText === '-' || incomingText === '...') return;
 
               const isFinal = Boolean(msg.is_final ?? msg.isFinal ?? true);
               const speaker = (msg.speaker === 'Simran' || msg.speaker === 'Saraah') ? 'Simran' : 'You';
@@ -296,6 +296,10 @@ export function useStsRoom() {
 
               setTranscripts((prev) => {
                 const last = prev[prev.length - 1];
+                // Suppress immediate consecutive duplicate turns from same speaker
+                if (last && (last.speaker === speaker || (speaker === 'Simran' && (last.speaker === 'Simran' || last.speaker === 'Saraah'))) && last.text === incomingText) {
+                  return prev;
+                }
                 // Only update the last message in-place if it is an ongoing non-final streaming turn from the same speaker
                 if (last && last.speaker === msg.speaker && !last.isFinal) {
                   return [

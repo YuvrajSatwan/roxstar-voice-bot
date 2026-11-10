@@ -88,6 +88,7 @@
 
 html, body {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -106,9 +107,12 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 0 24px 20px;
+  padding: 0 20px 10px;
+  overflow: hidden;
 }
 
 /* ================================================================ Top Navbar */
@@ -337,9 +341,10 @@ body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 20px;
-  margin-top: 14px;
+  grid-template-columns: 350px 1fr;
+  gap: 16px;
+  margin-top: 10px;
+  overflow: hidden;
 }
 
 /* ================================================================ Left Stage Pane */
@@ -347,8 +352,30 @@ body {
 .stage-pane {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
+  gap: 8px;
+}
+
+.stage-content-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.stage-content-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.stage-content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.2);
+  border-radius: 4px;
 }
 
 /* Stage Card */
@@ -356,7 +383,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-lg);
-  padding: 24px 20px 18px;
+  padding: 14px 16px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -364,6 +391,7 @@ body {
   box-shadow: var(--shadow-card);
   position: relative;
   transition: all var(--dur) var(--ease);
+  flex-shrink: 0;
 }
 
 .stage-card[data-state='speaking'] {
@@ -479,31 +507,31 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 6px;
 }
 
 .stage-name {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
 
 .stage-role {
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--ink-3);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .stage-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 4px 12px;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
   background: var(--surface-sunken);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--ink-2);
   transition: all var(--dur) var(--ease);
@@ -545,8 +573,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
+  padding-top: 8px;
   border-top: 1px solid var(--surface-border);
+  margin-top: 4px;
 }
 
 .stage-user-left {
@@ -618,17 +647,24 @@ body {
 /* ================================================================ Controls */
 
 .stage-controls {
+  flex-shrink: 0;
   margin-top: auto;
+  padding: 8px 0 2px;
+  background: var(--bg);
+  border-top: 1px solid rgba(124, 58, 237, 0.08);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .start-call-btn {
   width: 100%;
-  height: 52px;
+  height: 48px;
   border-radius: var(--radius-md);
   background: var(--gradient-starmaker);
   color: #ffffff;
   border: none;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -654,8 +690,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 6px 0;
+  gap: 14px;
+  padding: 4px 0;
 }
 
 .mic-btn-wrap {
@@ -3296,9 +3332,20 @@ body {
   /* Pane visibility toggled by mobile tab */
   .room-main--show-stage .stage-pane {
     display: flex;
+    flex-direction: column;
     flex: 1;
-    overflow-y: auto;
-    padding-bottom: 8px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 4px;
+  }
+
+  .stage-controls {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: var(--bg);
+    padding: 6px 0 2px;
   }
 
   .room-main--show-stage .conversation-pane {

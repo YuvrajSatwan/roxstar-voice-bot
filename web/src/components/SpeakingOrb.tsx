@@ -135,9 +135,9 @@ export const SpeakingOrb: React.FC<SpeakingOrbProps> = ({
   const [hasWebGL, setHasWebGL] = useState(true);
 
   const sizePixels = {
-    sm: 170,
-    md: 230,
-    lg: 290,
+    sm: 130,
+    md: 180,
+    lg: 220,
   }[size];
 
   useEffect(() => {

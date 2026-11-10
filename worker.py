@@ -136,7 +136,7 @@ async def entrypoint(ctx: JobContext) -> None:
     async def save_profile(field: str, value: str) -> str:
         clean_val = value.strip().lower()
         if clean_val in {"unknown", "not specified", "none", "n/a", "undefined", "not mentioned"}:
-            return "Ignored placeholder value."
+            return '{"status": "ignored"}'
         success = tracker.save_field(field, value)
         if success:
             publish_data({
@@ -153,8 +153,8 @@ async def entrypoint(ctx: JobContext) -> None:
                         "balance": bal,
                         "reason": "Welcome Gift & Daily Login Bonus",
                     })
-            return "Field saved silently. Do not repeat the previous question; smoothly advance to the next topic."
-        return "Field not recognized."
+            return '{"status": "saved"}'
+        return '{"status": "unrecognized"}'
 
     @llm.function_tool(
         description="Check real-time available duet rooms in RoxStar before recommending a duet to the user."
@@ -264,8 +264,9 @@ async def entrypoint(ctx: JobContext) -> None:
             input_audio_transcription=transcription_config,
             output_audio_transcription=transcription_config,
             temperature=0.7,
+            tool_response_scheduling=genai_types.FunctionResponseScheduling.SILENT,
         )
-        logger.info("RealtimeModel initialized with audio transcriptions enabled (api_version=v1beta)")
+        logger.info("RealtimeModel initialized with silent tool scheduling & audio transcriptions enabled (api_version=v1beta)")
     except Exception as e:
         logger.warning("Could not set transcription config (%s), falling back to basic init", e)
         realtime_model = RealtimeModel(
@@ -275,6 +276,7 @@ async def entrypoint(ctx: JobContext) -> None:
             api_key=settings.gemini_api_key,
             api_version="v1beta",
             temperature=0.7,
+            tool_response_scheduling=genai_types.FunctionResponseScheduling.SILENT,
         )
 
     agent = Agent(
@@ -399,16 +401,29 @@ async def entrypoint(ctx: JobContext) -> None:
                 "is_final": ev.is_final,
             })
 
+    last_assistant_item = {"text": "", "time": 0.0}
+
     @session.on("conversation_item_added")
     def on_item(ev: ConversationItemAddedEvent) -> None:
         item = ev.item
         role = getattr(item, "role", None)
         if role == "assistant" and hasattr(item, "text_content") and item.text_content:
-            logger.info("Simran item: %s", item.text_content)
+            raw_text = str(item.text_content).strip()
+            # Filter out non-speech artifacts, empty lines, and markdown dashes
+            if not raw_text or raw_text in {"---", "--", "-", "...", "null", "none"}:
+                logger.info("Filtered non-speech assistant artifact item: %r", raw_text)
+                return
+            now = time.time()
+            if raw_text == last_assistant_item["text"] and (now - last_assistant_item["time"]) < 6.0:
+                logger.info("Deduplicated identical consecutive assistant turn within 6s: %r", raw_text)
+                return
+            last_assistant_item["text"] = raw_text
+            last_assistant_item["time"] = now
+            logger.info("Simran item: %s", raw_text)
             publish_data({
                 "type": "roxstar.sts.transcript",
                 "speaker": "Simran",
-                "text": item.text_content,
+                "text": raw_text,
                 "is_final": True,
             })
 

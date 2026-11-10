@@ -164,49 +164,51 @@ export function App() {
       <main className={`room-main ${mobileTab === 'chat' ? 'room-main--show-chat' : 'room-main--show-stage'}`}>
         {/* Left Pane: Stage */}
         <section className="stage-pane" aria-label="Audio Stage">
-          {/* In Lounge Mode, show Simran's living presence */}
-          {stageMode === 'lounge' && (
-            <SimranPresence
-              state={simranState}
-              audioLevel={audioLevel}
+          <div className="stage-content-scroll">
+            {/* In Lounge Mode, show Simran's living presence */}
+            {stageMode === 'lounge' && (
+              <SimranPresence
+                state={simranState}
+                audioLevel={audioLevel}
+                isConnected={isConnected}
+                userName={userName}
+                onUserNameChange={setUserName}
+                isMuted={isMuted}
+                isSimranAway={isSimranAway}
+                simranAwayReason={simranAwayReason}
+                onRejoinSimran={rejoinSimran}
+                caption={latestSimranTranscript}
+              />
+            )}
+
+            {/* StarMaker Karaoke Stage & Feature Controls */}
+            <KaraokeStageBar
               isConnected={isConnected}
-              userName={userName}
-              onUserNameChange={setUserName}
-              isMuted={isMuted}
-              isSimranAway={isSimranAway}
-              simranAwayReason={simranAwayReason}
-              onRejoinSimran={rejoinSimran}
-              caption={latestSimranTranscript}
+              navigatedDuetRoom={navigatedDuetRoom}
+              onClearDuetNavigation={clearDuetNavigation}
+              navigatedSoloRecording={navigatedSoloRecording}
+              onClearSoloNavigation={clearSoloNavigation}
+              onEmitAppEvent={emitAppEvent}
+              onDeclineDuet={declineDuet}
+              coinBalance={coinBalance}
+              coinsAwardedEvent={coinsAwardedEvent}
+              onDismissCoinsReward={dismissCoinsReward}
+              onSendDuetGift={sendDuetGift}
+              onStageModeChange={setStageMode}
+              latestSimranTranscript={latestSimranTranscript}
+              onTriggerCoinsPopup={triggerCoinsPopup}
             />
-          )}
 
-          {/* StarMaker Karaoke Stage & Feature Controls */}
-          <KaraokeStageBar
-            isConnected={isConnected}
-            navigatedDuetRoom={navigatedDuetRoom}
-            onClearDuetNavigation={clearDuetNavigation}
-            navigatedSoloRecording={navigatedSoloRecording}
-            onClearSoloNavigation={clearSoloNavigation}
-            onEmitAppEvent={emitAppEvent}
-            onDeclineDuet={declineDuet}
-            coinBalance={coinBalance}
-            coinsAwardedEvent={coinsAwardedEvent}
-            onDismissCoinsReward={dismissCoinsReward}
-            onSendDuetGift={sendDuetGift}
-            onStageModeChange={setStageMode}
-            latestSimranTranscript={latestSimranTranscript}
-            onTriggerCoinsPopup={triggerCoinsPopup}
-          />
+            {/* Discovery Profile Badges (in lounge mode) */}
+            {stageMode === 'lounge' && (
+              <DiscoveryProfileBadge
+                profile={userProfile}
+                discoveredTopics={discoveredTopics}
+              />
+            )}
+          </div>
 
-          {/* Discovery Profile Badges (in lounge mode) */}
-          {stageMode === 'lounge' && (
-            <DiscoveryProfileBadge
-              profile={userProfile}
-              discoveredTopics={discoveredTopics}
-            />
-          )}
-
-          {/* Always-accessible Mic & Call Controls */}
+          {/* Always-accessible Mic & Call Controls (Docked permanently on-screen, no scrolling needed!) */}
           <Controls
             isConnected={isConnected}
             isConnecting={isConnecting}

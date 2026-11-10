@@ -268,3 +268,35 @@ def test_scenario_12_user_keeps_chatting_after_multiple_nudges() -> None:
     assert any(keyword in excuse.lower() for keyword in ["client", "mummy", "momos", "laptop", "friend", "deadline", "ritika"])
 
 
+def test_scenario_13_user_says_cannot_sing_two_attempt_encouragement() -> None:
+    """13. User says they cannot sing -> Saara encourages twice (Duet bridge, then solo/comment promise) before signing off."""
+    registry = DuetRoomRegistry([
+        DuetRoom(room_id="duet-romantic", title="Romantic Jam", genre="Romantic", host_name="Rhea", song_title="Tum Hi Ho")
+    ])
+    profile = UserDiscoveryProfile(user_id="user_hesitant", name="Rohit", music_taste=["Romantic"])
+    tracker = OnboardingTracker(profile=profile, duet_registry=registry)
+
+    # Attempt 1: User says "nahi mujhe gana nahi aata" -> Duet bridge suggested (no perfect singer needed)
+    can_suggest, hint, room = tracker.suggest_duet()
+    assert can_suggest
+    assert room is not None
+    assert tracker.action_nudge_count == 1
+    assert not tracker.should_sign_off()
+
+    # Verify context guides to Attempt 2 encouragement
+    summary1 = tracker.get_summary_context()
+    assert "ENCOURAGEMENT ATTEMPT 2" in summary1
+    assert "favorite song" in summary1
+
+    # Attempt 2: User says "achha feature hai" but declines to sing right now -> Record decline
+    tracker.record_duet_declined()
+    assert tracker.action_nudge_count == 2
+    assert tracker.should_sign_off()
+
+    # After 2 attempts: sign-off triggers with realistic excuse
+    summary2 = tracker.get_summary_context()
+    assert "SIGN-OFF STATUS (CRITICAL)" in summary2
+    excuse = tracker.get_random_excuse()
+    assert excuse in SAARA_SIGNOFF_EXCUSES
+
+

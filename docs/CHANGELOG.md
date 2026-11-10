@@ -6,7 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] - 2026-11-09
+## [Unreleased] - 2026-11-10
+
+### Added
+- **2-Attempt Singing Encouragement Flow Before Sign-Off**:
+  - Implemented a two-step conversational encouragement journey in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) for users who hesitate or state they cannot sing ("nahi aata", "sharm aati hai"):
+    - **Attempt 1**: Warm reassurance that Roxstar is zero-pressure and no perfect singer is needed, offering Duet as a fun way to blend their voice with someone else.
+    - **Attempt 2**: If the user acknowledges or hesitates further, warmly encourages them to record/post their favourite song whenever they feel like it, with Saara's personal promise to wait for their song, listen to it, and comment on it.
+  - Aligned sign-off logic in [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py) and [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) so that the strict 2-decline exit triggers only after these two warm encouragements.
+  - Added automated test scenario `test_scenario_13_user_says_cannot_sing_two_attempt_encouragement` in [`tests/test_sts_onboarding_scenarios.py`](file:///y:/roxstar/sts_lab/tests/test_sts_onboarding_scenarios.py) (22/22 tests passing).
+
+---
+
+## [1.2.0] - 2026-11-09
 
 ### Added
 - **Render Infrastructure as Code (render.yaml Blueprint)**:

@@ -561,6 +561,11 @@ class OnboardingTracker:
         if not self.profile.coins_explained:
             lines.append("COIN MISSION: Share the free daily coins & gifting insider tip before ending.")
 
+        if self.action_nudge_count == 1 and not self.should_sign_off():
+            lines.append(
+                "ENCOURAGEMENT ATTEMPT 2: User hesitated or deflected Attempt 1. Warmly encourage them that whenever they feel like it, they can record and post their favorite song, and promise you will wait for it, listen to it, and comment on it!"
+            )
+
         if self.should_sign_off():
             lines.append(
                 f"SIGN-OFF STATUS (CRITICAL): User has declined/deflected {self.action_nudge_count} times! "

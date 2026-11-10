@@ -7,3 +7,4 @@ setup(
     packages=["sts_lab"],
     package_dir={"sts_lab": "."},
 )
+

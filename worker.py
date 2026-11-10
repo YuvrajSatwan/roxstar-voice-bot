@@ -525,9 +525,11 @@ async def entrypoint(ctx: JobContext) -> None:
                 else:
                     session.generate_reply(
                         user_input=(
-                            "The user declined the duet suggestion. Drop it completely, warmly and sweetly with zero pressure "
-                            "(e.g. 'Arre bilkul, koi pressure nahi! Solo record karke dekho na bas tap karna hai.'). "
-                            "Keep it under 15 words, sweet, friendly, and human."
+                            "The user hesitated or declined the duet suggestion. Deliver Encouragement Attempt 2 warmly: "
+                            "tell them they can sing and post their favourite song whenever they feel like it, and promise "
+                            "you will wait for their song, listen to it, and comment on it "
+                            "(e.g. 'Haan na! Aur jab bhi mann kare, apna favourite gaana gaa kar post kar dena. Main tumhare gaane ka wait karungi, sunungi bhi aur pakka comment karungi!'). "
+                            "Keep it under 22 words, sweet and encouraging."
                         )
                     )
                 publish_data({

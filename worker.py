@@ -127,6 +127,7 @@ async def entrypoint(ctx: JobContext) -> None:
         "turned_off": False,
         "reason": "",
     }
+    has_greeted = False
 
     # Tools definition for Simran
     @llm.function_tool(
@@ -152,7 +153,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "balance": bal,
                         "reason": "Welcome Gift & Daily Login Bonus",
                     })
-            return "Saved silently."
+            return "Field saved silently. Do not repeat the previous question; smoothly advance to the next topic."
         return "Field not recognized."
 
     @llm.function_tool(
@@ -263,8 +264,10 @@ async def entrypoint(ctx: JobContext) -> None:
             input_audio_transcription=transcription_config,
             output_audio_transcription=transcription_config,
             temperature=0.7,
+            presence_penalty=0.4,
+            frequency_penalty=0.4,
         )
-        logger.info("RealtimeModel initialized with audio transcriptions enabled (temperature=0.7, api_version=v1beta)")
+        logger.info("RealtimeModel initialized with penalties and audio transcriptions enabled (api_version=v1beta)")
     except Exception as e:
         logger.warning("Could not set transcription config (%s), falling back to basic init", e)
         realtime_model = RealtimeModel(
@@ -274,13 +277,28 @@ async def entrypoint(ctx: JobContext) -> None:
             api_key=settings.gemini_api_key,
             api_version="v1beta",
             temperature=0.7,
+            presence_penalty=0.4,
+            frequency_penalty=0.4,
         )
 
     agent = Agent(
         instructions=full_instructions,
         tools=[save_profile, check_available_duets, navigate_to_duet, navigate_to_recording],
     )
-    session = AgentSession(llm=realtime_model)
+    session = AgentSession(
+        llm=realtime_model,
+        turn_handling={
+            "interruption": {
+                "enabled": True,
+                "min_duration": 0.7,
+                "resume_false_interruption": False,
+            },
+            "preemptive_generation": {
+                "enabled": False,
+            },
+        },
+        min_consecutive_speech_delay=0.15,
+    )
 
     async def turn_off_bot(reason: str = "onboarding_completed") -> None:
         logger.info("Executing turn_off_bot (reason: %s)...", reason)
@@ -373,6 +391,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
     @session.on("user_input_transcribed")
     def on_user_transcribed(ev: UserInputTranscribedEvent) -> None:
+        nonlocal has_greeted
+        has_greeted = True
         text = getattr(ev, "transcript", None) or getattr(ev, "text", "")
         if text and text.strip():
             logger.info("User transcribed: %s (final=%s)", text, ev.is_final)
@@ -585,7 +605,11 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Trigger opening line natively for a visitor with minimum latency
     async def send_greeting() -> None:
+        nonlocal has_greeted
         await asyncio.sleep(0.08)  # minimal 80ms buffer for initial WebRTC track link
+        if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
+            return
+        has_greeted = True
         try:
             if tracker.profile.is_returning and tracker.profile.name:
                 logger.info("Triggering personalized warm welcome for returning user: %s", tracker.profile.name)

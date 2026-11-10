@@ -92,3 +92,4 @@ export const SimranOrb: React.FC<SimranOrbProps> = ({ state, audioLevel, isConne
     </div>
   );
 };
+

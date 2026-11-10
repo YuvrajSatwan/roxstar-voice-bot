@@ -155,6 +155,7 @@ export function useStsRoom() {
           RoomEvent.TrackSubscribed,
           (track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => {
             if (track.kind === Track.Kind.Audio) {
+              track.detach(); // Detach any existing audio elements to prevent duplicate/echo playback
               const el = track.attach();
               el.autoplay = true;
 
@@ -304,8 +305,12 @@ export function useStsRoom() {
         // Connect to LiveKit Room
         await room.connect(sess.url, sess.token);
 
-        // Publish local microphone
-        await room.localParticipant.setMicrophoneEnabled(true);
+        // Publish local microphone with explicit echo cancellation and noise suppression
+        await room.localParticipant.setMicrophoneEnabled(true, {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        });
         setIsMuted(false);
 
         // Add initial system greeting to transcript

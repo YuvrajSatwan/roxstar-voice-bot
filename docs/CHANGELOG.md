@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-10
 
+### Fixed
+- **Anti-Repetition & False-Interruption Remediation**:
+  - Identified and eliminated the root causes of the bot occasionally repeating itself:
+    - **False Interruption Auto-Resume Disabled**: Configured `turn_handling={"interruption": {"enabled": True, "min_duration": 0.7, "resume_false_interruption": False}, "preemptive_generation": {"enabled": False}}` in `AgentSession`. This prevents ambient mic noise or micro-coughs from triggering false interruptions that previously replayed the agent's turn from the beginning.
+    - **Frequency & Presence Penalties**: Configured `presence_penalty=0.4` and `frequency_penalty=0.4` in `RealtimeModel` to mathematically penalize repetitive phrasing and loop states.
+    - **Opening Greeting Deduplication Guard**: Added `has_greeted` state latch in `worker.py` to prevent race conditions between automatic ambient audio VAD and `session.generate_reply()`.
+    - **Post-Tool-Call Continuity Prompting**: Changed `save_profile()` tool response to `"Field saved silently. Do not repeat the previous question; smoothly advance to the next topic."` to prevent re-asking funnel questions after tool runs.
+    - **Prompt Anti-Repetition Guardrails**: Added explicit rules in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) forbidding re-introductions ("Main Simran"), repeating questions, or echoing user turns.
+    - **Audio Track Detach & Hardware Echo Cancellation**: Enforced `track.detach()` before attaching audio tracks in `useStsRoom.ts`, and enforced explicit browser echo cancellation and noise suppression in `setMicrophoneEnabled` to prevent acoustic loopback.
+
 ### Changed
 - **Complete Project & Persona Rename to Simran**:
   - Rebranded the persona, backend agent, configs, tests, and web UI across the entire codebase from Saara / Saraah to **Simran**:

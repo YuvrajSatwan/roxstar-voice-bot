@@ -9,6 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Dynamic Procedural 3D Simplex Turbulence & Non-Repetitive Speaking Orb Styles**:
+  - Implemented 3D simplex procedural noise (`snoise`) in GLSL inside `SpeakingOrb.tsx` and `web/public/speaking-orb.js`, creating organic, non-repetitive fluid eddies so no two frames or audio swells look identical.
+  - Added non-linear orbital rotation with dynamic velocity modulation, variable X/Y inclination wobbles, and random per-particle drift vectors (`aDrift`).
+  - Curated and implemented 3 distinct visual styles:
+    - **`✨ Astral` (Astral Stardust - Recommended Best)**: Deep cosmic stardust cloud with fluid turbulence, StarMaker Royal Purple core shifting to vibrant Hot Pink with bright Electric Cyan acoustic sparkles and upward traveling syllable rings.
+    - **`🌟 Plasma` (Bioluminescent Plasma Core)**: Energetic solar/plasma orb with coronal mass ejections and radiant flares reacting to vocal dynamics.
+    - **`🎵 Sonic` (Cyber Sonic Wave)**: Harmonic acoustic latitude rings undulating like a futuristic 3D equalizer.
+  - Added interactive visual style switcher pill bar (`✨ Astral`, `🌟 Plasma`, `🎵 Sonic`) in `SimranPresence.tsx` with persistent user selection via `localStorage` (`roxstar_orb_style`).
+- **Sticky Controls & Viewport Lock**:
+  - Locked main studio container to `100vh`/`100dvh` with `overflow: hidden`, wrapping scrollable content in `.stage-content-scroll` while docking `.stage-controls` with sticky positioning at the bottom.
+  - Fixed mobile & desktop layout so the Mic On/Off toggle, Call button, and stage visualizers fit within the screen without requiring vertical page scrolling.
 - **True StarMaker Brand Aesthetics (Clean White Canvas, Royal Purple & Hot Pink)**:
   - Redesigned the entire web studio UI under Lead UI/UX direction to adhere to StarMaker's authentic brand color balance: 60% Pure White canvas (`#ffffff`), 30% Royal/Electric Purple (`#7c3aed`), and 10% High-Energy Hot Pink (`#ff2e93`), with Golden Amber (`#f59e0b`) for coin wallets and rewards.
   - Updated all cards, modals, composer inputs, badges, and performer containers to pure white surfaces with soft lavender depth (`rgba(124, 58, 237, 0.12)`) and high-contrast obsidian-plum typography (`#1f1633`).

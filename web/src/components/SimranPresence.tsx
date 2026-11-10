@@ -1,5 +1,5 @@
-import React from 'react';
-import { SpeakingOrb } from './SpeakingOrb';
+import React, { useState, useEffect } from 'react';
+import { SpeakingOrb, SpeakingOrbStyle } from './SpeakingOrb';
 import { Coffee, Mic, MicOff, RotateCcw, Sparkles, User } from 'lucide-react';
 
 export interface SimranPresenceProps {
@@ -46,6 +46,21 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
   const awayReason = simranAwayReason || saaraAwayReason;
   const recallAction = onRejoinSimran || onRejoinSaara;
 
+  const [orbStyle, setOrbStyle] = useState<SpeakingOrbStyle>(() => {
+    try {
+      const saved = localStorage.getItem('roxstar_orb_style');
+      if (saved === 'astral' || saved === 'plasma' || saved === 'sonic') return saved;
+    } catch {}
+    return 'astral';
+  });
+
+  const handleStyleChange = (style: SpeakingOrbStyle) => {
+    setOrbStyle(style);
+    try {
+      localStorage.setItem('roxstar_orb_style', style);
+    } catch {}
+  };
+
   return (
     <div className={`stage-card ${away ? 'stage-card--away' : ''}`} data-state={currentState}>
       {away ? (
@@ -84,6 +99,7 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
               state={currentState}
               audioLevel={audioLevel}
               size="md"
+              styleMode={orbStyle}
               caption={currentState === 'speaking' ? caption : undefined}
             />
           </div>
@@ -96,6 +112,34 @@ export const SimranPresence: React.FC<SimranPresenceProps> = ({
             <div className="stage-status-pill" data-state={currentState}>
               <span className="stage-status-dot" />
               <span className="stage-status-label">{label}</span>
+            </div>
+
+            {/* Orb Visual Style Selector */}
+            <div className="orb-style-picker" role="radiogroup" aria-label="Orb visual style">
+              <button
+                type="button"
+                onClick={() => handleStyleChange('astral')}
+                className={`orb-style-pill ${orbStyle === 'astral' ? 'orb-style-pill--active' : ''}`}
+                title="Astral Stardust: Non-repetitive fluid noise & syllable rings (Recommended)"
+              >
+                ✨ Astral
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStyleChange('plasma')}
+                className={`orb-style-pill ${orbStyle === 'plasma' ? 'orb-style-pill--active' : ''}`}
+                title="Plasma Core: Bioluminescent pulsing solar flares"
+              >
+                🌟 Plasma
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStyleChange('sonic')}
+                className={`orb-style-pill ${orbStyle === 'sonic' ? 'orb-style-pill--active' : ''}`}
+                title="Cyber Sonic: Harmonic acoustic equalizer rings"
+              >
+                🎵 Sonic
+              </button>
             </div>
           </div>
         </>

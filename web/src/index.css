@@ -567,6 +567,45 @@ body {
   background: var(--warn);
 }
 
+/* Orb Style Switcher */
+.orb-style-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-sunken);
+  padding: 2px 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--surface-border);
+  margin-top: 6px;
+}
+
+.orb-style-pill {
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  user-select: none;
+}
+
+.orb-style-pill:hover {
+  color: var(--ink-1);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.orb-style-pill--active {
+  background: linear-gradient(135deg, var(--starmaker-purple) 0%, var(--starmaker-pink) 100%);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(255, 46, 147, 0.25);
+}
+
 /* User Strip inside Stage Card */
 .stage-user-strip {
   width: 100%;

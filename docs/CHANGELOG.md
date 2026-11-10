@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-10
 
+### Added
+- **StarMaker-Inspired Live Karaoke Stage Experience**:
+  - Transformed the web studio UI into an immersive StarMaker karaoke atmosphere with deep obsidian stage background (`#090714`), neon violet and pink accents, and high-energy interactive components.
+  - **Seamless Stage Redirection**: When user clicks "Join Duet" or "Solo Record" (or when Simran directs via `navigatedDuetRoom` or `navigatedSoloRecording`), the interface redirects directly into the full-featured StarMaker Live Duet Stage or Solo Recording Studio.
+  - **Dynamic Free Coins Celebration Popup**: Auto-detects coin mentions in Simran's voice speech transcript (e.g. "coin", "coins", "daily login bonus") and instantly bursts the StarMaker Gold Coin Celebration Modal with spinning 3D coin, sunburst rays, and "+50 Coins" reward notification.
+  - **Interactive Floating Gifts Particle System**: Added interactive gift dock with 🌹 Rose (5 C), 🎙️ Golden Mic (10 C), 👑 VIP Crown (25 C), and 🚀 Star Rocket (50 C). Tapping gifts triggers multi-emoji floating particles ascending the stage with sway and fading trails (`@keyframes floatGiftUp`), live audience reaction broadcasts, and wallet balance deductions.
+  - **Synchronized Teleprompter with Bouncing Karaoke Ball**: Added animated bouncing musical ball (`🎵`) jumping along the active lyrics track with glowing line highlights and Web Audio harmonic chord synthesizer.
+  - **Real-Time Vocal Pitch Rating Meter**: Added StarMaker vocal performance badges (`SSS`, `SS`, `S`, `A`) with real-time percentage and shimmering neon gradient meter.
+  - **VIP Front-Row Cheer Pod**: Positioned Simran with a VIP avatar in the front row of the live stage, displaying synchronized real-time cheer quotes as the user sings.
+  - **Mobile Responsiveness & Segmented View Switcher**: Designed mobile layouts (`100dvh`, zero horizontal overflow) with top segmented switcher (`[🎤 Studio Stage]` / `[💬 Simran & Chat]`), unread speaking pulse badges, touch targets >= 44px, and smooth slide-up bottom sheets for modals.
+
 ### Fixed
 - **Anti-Repetition & False-Interruption Remediation**:
   - Identified and eliminated the root causes of the bot occasionally repeating itself:

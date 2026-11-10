@@ -85,6 +85,7 @@ export function useStsRoom() {
   const roomRef = useRef<Room | null>(null);
   const analyserCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const hasTriggeredVoiceCoinsRef = useRef(false);
 
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
@@ -117,6 +118,7 @@ export function useStsRoom() {
     setIsSimranAway(false);
     setSimranAwayReason(null);
     setCoinsAwardedEvent(null);
+    hasTriggeredVoiceCoinsRef.current = false;
     setNavigatedDuetRoom(null);
     setNavigatedSoloRecording(null);
   }, []);
@@ -274,6 +276,23 @@ export function useStsRoom() {
               if (!incomingText) return;
 
               const isFinal = Boolean(msg.is_final ?? msg.isFinal ?? true);
+              const speaker = (msg.speaker === 'Simran' || msg.speaker === 'Saraah') ? 'Simran' : 'You';
+
+              // Dynamic StarMaker Coin Reward: Trigger celebratory coin popup when Simran talks about coins!
+              if (speaker === 'Simran' && !hasTriggeredVoiceCoinsRef.current) {
+                const lower = incomingText.toLowerCase();
+                const mentionsCoins = ['coin', 'coins', 'सिक्के', 'कॉइन', 'कॉइन्स', 'daily login bonus', 'welcome coins'].some((kw) => lower.includes(kw));
+                if (mentionsCoins) {
+                  hasTriggeredVoiceCoinsRef.current = true;
+                  const newBal = 50;
+                  setCoinBalance((prev) => (prev > 0 ? prev : newBal));
+                  setCoinsAwardedEvent({
+                    amount: 50,
+                    balance: newBal,
+                    reason: 'Daily Login Bonus Claimed',
+                  });
+                }
+              }
 
               setTranscripts((prev) => {
                 const last = prev[prev.length - 1];
@@ -289,7 +308,7 @@ export function useStsRoom() {
                   ...prev,
                   {
                     id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                    speaker: (msg.speaker === 'Simran' || msg.speaker === 'Saraah') ? 'Simran' : 'You',
+                    speaker,
                     text: incomingText,
                     time: now,
                     isFinal,
@@ -407,6 +426,18 @@ export function useStsRoom() {
     setCoinsAwardedEvent(null);
   }, []);
 
+  const triggerCoinsPopup = useCallback(
+    (amount = 50, reason = 'Daily Login Bonus Claimed') => {
+      setCoinBalance((prev) => (prev > 0 ? prev : amount));
+      setCoinsAwardedEvent({
+        amount,
+        balance: Math.max(amount, coinBalance),
+        reason,
+      });
+    },
+    [coinBalance],
+  );
+
   const rejoinSimran = useCallback(async () => {
     setIsSimranAway(false);
     setSimranAwayReason(null);
@@ -455,6 +486,7 @@ export function useStsRoom() {
     coinBalance,
     coinsAwardedEvent,
     dismissCoinsReward,
+    triggerCoinsPopup,
     rejoinSimran,
     rejoinSaara,
     sendDuetGift,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStsRoom } from './hooks/useStsRoom';
 import { SimranPresence } from './components/SimranPresence';
 import { TranscriptView } from './components/TranscriptView';
@@ -6,10 +6,13 @@ import { Controls } from './components/Controls';
 import { TooltipOverlay } from './components/TooltipOverlay';
 import { KaraokeStageBar } from './components/KaraokeStageBar';
 import { DiscoveryProfileBadge } from './components/DiscoveryProfileBadge';
-import { ArrowUpRight, Music2, Sparkles, Zap } from 'lucide-react';
+import { ArrowUpRight, Coins, MessageSquare, Mic, Music2, Sparkles, Zap } from 'lucide-react';
 
 export function App() {
   const [userName, setUserName] = useState('Rahul');
+  const [stageMode, setStageMode] = useState<'lounge' | 'duet' | 'solo'>('lounge');
+  const [mobileTab, setMobileTab] = useState<'stage' | 'chat'>('stage');
+
   const {
     session,
     isConnected,
@@ -33,6 +36,7 @@ export function App() {
     coinBalance,
     coinsAwardedEvent,
     dismissCoinsReward,
+    triggerCoinsPopup,
     rejoinSimran,
     sendDuetGift,
     connect,
@@ -47,14 +51,27 @@ export function App() {
     void connect(userName);
   };
 
+  // Auto-switch mobile view to stage when entering Duet or Solo
+  useEffect(() => {
+    if (stageMode === 'duet' || stageMode === 'solo') {
+      setMobileTab('stage');
+    }
+  }, [stageMode]);
+
+  // Extract latest turn from Simran for VIP front-row stage cheer
+  const latestSimranTurn = [...transcripts].reverse().find(
+    (t) => t.speaker === 'Simran' || t.speaker === 'Saraah',
+  );
+  const latestSimranTranscript = latestSimranTurn?.text;
+
   const ttfa = telemetry.ttfaMs ?? 385;
 
   return (
-    <div className="room-shell">
+    <div className={`room-shell ${stageMode !== 'lounge' ? 'room-shell--live-stage' : ''}`}>
       {/* Floating Contextual Tooltip */}
       <TooltipOverlay tooltip={activeTooltip} onDismiss={dismissTooltip} />
 
-      {/* Refined Minimalist Top Header */}
+      {/* StarMaker Studio Top Header */}
       <header className="room-nav">
         <div className="room-nav__brand">
           <div className="brand-icon">
@@ -67,7 +84,18 @@ export function App() {
         </div>
 
         <div className="room-nav__meta">
-          {/* Subtle Telemetry Pill */}
+          {/* StarMaker Clickable Coins Pill */}
+          <button
+            type="button"
+            onClick={() => triggerCoinsPopup(50, 'Daily Free Welcome Bonus Claimed')}
+            className="room-nav__coins-btn"
+            title="Your StarMaker Coins Wallet - Tap to claim daily bonus"
+          >
+            <Coins size={14} className="coin-gold-icon" />
+            <span>{coinBalance} Coins</span>
+          </button>
+
+          {/* Direct Speech-to-Speech Telemetry Pill */}
           <div
             className="telemetry-pill"
             title={`Direct Gemini 3.8 Live Speech-to-Speech (TTFA: ${ttfa}ms, Voice: Sulafat)`}
@@ -77,15 +105,15 @@ export function App() {
             <span className="telemetry-pill__sub">S2S</span>
           </div>
 
-          {/* Quiet Link to Dual-Bot Cascade UI */}
+          {/* Cascade UI Link */}
           <a
             href="http://127.0.0.1:5174"
             target="_blank"
             rel="noreferrer"
             className="nav-link-cascade"
-            title="Switch to original Dual-Bot (Kabir & Simran) Cascade UI"
+            title="Switch to Dual-Bot (Kabir & Simran) Cascade UI"
           >
-            <span>Dual-Bot (5174)</span>
+            <span>Dual-Bot</span>
             <ArrowUpRight size={13} />
           </a>
         </div>
@@ -101,23 +129,57 @@ export function App() {
         </div>
       )}
 
-      {/* Main 2-Pane Clean Studio Layout */}
-      <main className="room-main">
+      {/* StarMaker Mobile Segmented Tabs Bar */}
+      <div className="mobile-tab-bar" role="tablist" aria-label="Mobile View Switcher">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'stage'}
+          onClick={() => setMobileTab('stage')}
+          className={`mobile-tab-btn ${mobileTab === 'stage' ? 'mobile-tab-btn--active' : ''}`}
+        >
+          <Music2 size={15} />
+          <span>Stage Studio</span>
+          {(stageMode === 'duet' || stageMode === 'solo') && (
+            <span className="mobile-tab-live-dot" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'chat'}
+          onClick={() => setMobileTab('chat')}
+          className={`mobile-tab-btn ${mobileTab === 'chat' ? 'mobile-tab-btn--active' : ''}`}
+        >
+          <MessageSquare size={15} />
+          <span>Simran & Chat</span>
+          {simranState === 'speaking' && (
+            <span className="mobile-tab-speaking-pulse" title="Simran is speaking" />
+          )}
+        </button>
+      </div>
+
+      {/* Main Studio Layout: Responsive 2-Pane on Desktop, Tabbed on Mobile */}
+      <main className={`room-main ${mobileTab === 'chat' ? 'room-main--show-chat' : 'room-main--show-stage'}`}>
         {/* Left Pane: Stage */}
         <section className="stage-pane" aria-label="Audio Stage">
-          <SimranPresence
-            state={simranState}
-            audioLevel={audioLevel}
-            isConnected={isConnected}
-            userName={userName}
-            onUserNameChange={setUserName}
-            isMuted={isMuted}
-            isSimranAway={isSimranAway}
-            simranAwayReason={simranAwayReason}
-            onRejoinSimran={rejoinSimran}
-          />
+          {/* In Lounge Mode, show Simran's living presence */}
+          {stageMode === 'lounge' && (
+            <SimranPresence
+              state={simranState}
+              audioLevel={audioLevel}
+              isConnected={isConnected}
+              userName={userName}
+              onUserNameChange={setUserName}
+              isMuted={isMuted}
+              isSimranAway={isSimranAway}
+              simranAwayReason={simranAwayReason}
+              onRejoinSimran={rejoinSimran}
+            />
+          )}
 
-          {/* Karaoke Feature Controls */}
+          {/* StarMaker Karaoke Stage & Feature Controls */}
           <KaraokeStageBar
             isConnected={isConnected}
             navigatedDuetRoom={navigatedDuetRoom}
@@ -130,14 +192,20 @@ export function App() {
             coinsAwardedEvent={coinsAwardedEvent}
             onDismissCoinsReward={dismissCoinsReward}
             onSendDuetGift={sendDuetGift}
+            onStageModeChange={setStageMode}
+            latestSimranTranscript={latestSimranTranscript}
+            onTriggerCoinsPopup={triggerCoinsPopup}
           />
 
-          {/* Discovery Profile Badges */}
-          <DiscoveryProfileBadge
-            profile={userProfile}
-            discoveredTopics={discoveredTopics}
-          />
+          {/* Discovery Profile Badges (in lounge mode) */}
+          {stageMode === 'lounge' && (
+            <DiscoveryProfileBadge
+              profile={userProfile}
+              discoveredTopics={discoveredTopics}
+            />
+          )}
 
+          {/* Always-accessible Mic & Call Controls */}
           <Controls
             isConnected={isConnected}
             isConnecting={isConnecting}

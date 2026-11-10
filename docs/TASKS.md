@@ -28,6 +28,14 @@
 - [x] **Virtual Coin Rewards**: Added 50 welcome coin bonus grant and gift-sending logic (`roxstar.coins_awarded`, `roxstar.coin_balance`).
 
 ### Frontend Web Studio
+- [x] **StarMaker-Inspired Live Stage Experience**: Transformed web studio into a polished StarMaker karaoke experience with deep obsidian stage atmosphere (`#090714`), glassmorphic panels, and glowing neon accents.
+- [x] **Seamless Live Duet & Solo Stage Redirection**: Seamlessly redirects the main view to the StarMaker Live Stage or Solo Recording Studio upon joining or receiving navigation triggers.
+- [x] **Dynamic Free Coin Reward Celebration**: Auto-detects coin mentions in Simran's voice speech and triggers a celebratory StarMaker Gold Coin popup with spinning 3D coin, sunburst rays, and instant bonus claiming.
+- [x] **Interactive Floating Gifts Particle System**: Implemented live stage gift launcher supporting 🌹 Rose (5 C), 🎙️ Golden Mic (10 C), 👑 VIP Crown (25 C), and 🚀 Star Rocket (50 C) with animated floating emoji shower and audience reaction ticker.
+- [x] **Synchronized Karaoke Teleprompter**: Synchronized multi-part lyrics with bouncing musical ball (`🎵`), glowing active-line highlight, and harmonic Web Audio chord synthesizer.
+- [x] **Real-Time Vocal Pitch Rating Meter**: StarMaker vocal grading badges (`SSS`, `SS`, `S`, `A`) with dynamic accuracy percentage and neon gradient meter.
+- [x] **VIP Front-Row Cheer Pod**: Embedded Simran in the front-row VIP seat with live cheering speech bubble synchronized with ongoing speech turns.
+- [x] **Full Mobile Responsiveness & Segmented Switcher**: Designed mobile layout (`100dvh`, no horizontal overflow) with top segmented switcher (`[🎤 Studio Stage]` / `[💬 Simran & Chat]`), notification indicators, touch-optimized buttons (>=44px), and slide-up bottom sheets.
 - [x] **2-Pane Studio UI**: Built modern React 19 + TypeScript studio with live audio visualizer (`SimranPresence`, `AudioVisualizer`), stage bar, controls, and telemetry pill.
 - [x] **Live Transcripts & State Sync**: Implemented scrolling transcript view for user and Simran turns, backed by WebRTC DataPackets.
 - [x] **Discovery Badges**: Added real-time visual tags displaying captured user attributes.

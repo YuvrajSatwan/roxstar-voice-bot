@@ -162,3 +162,32 @@ def test_onboarding_tracker_bot_turned_off() -> None:
     assert tracker.simran_away_reason == "User entered solo recording stage"
     assert tracker.saara_away_reason == "User entered solo recording stage"
 
+
+def test_generic_occupation_detection_and_followup_hint() -> None:
+    profile = UserDiscoveryProfile(user_id="user_biz")
+    tracker = OnboardingTracker(profile=profile)
+
+    # 1. Generic occupation "business"
+    assert tracker.save_field("occupation", "business")
+    assert tracker.is_occupation_generic()
+    summary = tracker.get_summary_context()
+    assert "OCCUPATION NOTE" in summary
+    assert "Business mein kya karte ho?" in summary
+
+    # 2. Generic occupation "college student"
+    tracker.save_field("occupation", "college student")
+    assert tracker.is_occupation_generic()
+    summary2 = tracker.get_summary_context()
+    assert "OCCUPATION NOTE" in summary2
+
+    # 3. Generic occupation "job"
+    tracker.save_field("occupation", "job")
+    assert tracker.is_occupation_generic()
+
+    # 4. Specific occupation "Textile exporter in Surat"
+    tracker.save_field("occupation", "Textile exporter in Surat")
+    assert not tracker.is_occupation_generic()
+    summary3 = tracker.get_summary_context()
+    assert "OCCUPATION NOTE" not in summary3
+    assert "Textile exporter in Surat" in summary3
+

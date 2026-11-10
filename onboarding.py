@@ -40,6 +40,51 @@ VALID_PROFILE_FIELDS = frozenset({
     "coins_explained",
 })
 
+# Generic occupation keywords that warrant a curious follow-up question
+GENERIC_OCCUPATIONS = frozenset({
+    "business",
+    "dhandha",
+    "businessman",
+    "businesswoman",
+    "apna kaam",
+    "job",
+    "service",
+    "office",
+    "work",
+    "corporate",
+    "private job",
+    "govt job",
+    "government job",
+    "college",
+    "student",
+    "padhai",
+    "studies",
+    "school",
+    "university",
+    "freelance",
+    "freelancing",
+    "freelancer",
+    "engineer",
+    "engineering",
+    "startup",
+})
+
+
+def is_generic_occupation(occupation: str | None) -> bool:
+    """Detects if an occupation is generic (e.g., 'business', 'job', 'college', 'student') and warrants a follow-up."""
+    if not occupation:
+        return False
+    clean = occupation.strip().lower()
+    if clean in GENERIC_OCCUPATIONS:
+        return True
+    words = set(clean.replace("-", " ").replace(",", " ").split())
+    # If the user says 1 to 3 words like "job karta hoon" or "college student" or "business hai"
+    if len(words) <= 3 and words.intersection({
+        "business", "dhandha", "job", "college", "student", "freelance", "freelancing", "startup", "office", "engineer", "engineering"
+    }):
+        return True
+    return False
+
 # Simran's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
 SIMRAN_SIGNOFF_EXCUSES: list[str] = [
     "Arre door bell baji, lagta hai Swiggy wala aa gaya! Chalti hoon main, bye!",
@@ -313,6 +358,10 @@ class OnboardingTracker:
     def saara_away_reason(self, val: str | None) -> None:
         self.simran_away_reason = val
 
+    def is_occupation_generic(self) -> bool:
+        """Returns True if the discovered occupation is generic and warrants a curious follow-up."""
+        return is_generic_occupation(self.profile.occupation)
+
     def award_welcome_coins(self, amount: int = 50) -> tuple[int, bool]:
         """Awards welcome coins once to new users."""
         if self.coins_awarded:
@@ -576,6 +625,13 @@ class OnboardingTracker:
 
         if known:
             lines.append(f"ALREADY KNOWN (DO NOT ASK AGAIN): {'; '.join(known)}")
+
+        if self.profile.occupation and is_generic_occupation(self.profile.occupation):
+            lines.append(
+                f"OCCUPATION NOTE: The user's occupation '{self.profile.occupation}' is generic. "
+                f"Ask ONE curious follow-up (e.g. 'Business mein kya karte ho?' or 'College mein kya padh rahe ho?' or 'Job kis field mein hai?') "
+                f"before moving to hobbies."
+            )
 
         if self.declined_topics:
             lines.append(f"USER DECLINED (DO NOT ASK AGAIN): {', '.join(self.declined_topics)}")

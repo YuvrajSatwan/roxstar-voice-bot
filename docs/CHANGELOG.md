@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Curious Follow-Up on Generic Occupation Answers**:
+  - Enhanced Simran's conversational funnel in `prompt.py` with explicit generic occupation follow-up rules: when users provide broad answers (e.g. "business", "job", "college", "student", "freelancing", "startup", "office"), Simran will not rush past to hobbies or music. Instead, she reacts with genuine interest and asks exactly one natural follow-up question (e.g. "Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai aapki?") before sharing her own design work and advancing.
+  - Implemented `is_generic_occupation()` in `onboarding.py` and added automatic `OCCUPATION NOTE` context guidance in `OnboardingTracker.get_summary_context()` that stays active until concrete occupation details are discovered.
+  - Added unit test `test_generic_occupation_detection_and_followup_hint` and scenario test `test_scenario_15_user_generic_occupation_followup` (25/25 tests passing).
 - **Dynamic Procedural 3D Simplex Turbulence & Non-Repetitive Speaking Orb Styles**:
   - Implemented 3D simplex procedural noise (`snoise`) in GLSL inside `SpeakingOrb.tsx` and `web/public/speaking-orb.js`, creating organic, non-repetitive fluid eddies so no two frames or audio swells look identical.
   - Added non-linear orbital rotation with dynamic velocity modulation, variable X/Y inclination wobbles, and random per-particle drift vectors (`aDrift`).

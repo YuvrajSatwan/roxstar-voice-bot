@@ -15,6 +15,7 @@ Scenarios covered:
 12. User asked to join duet/solo 2-3 times but keeps chatting.
 13. User says they cannot sing -> two attempts encouragement.
 14. User initially hesitates but says YES after convincing.
+15. User gives generic occupation ('business', 'college', 'job') -> one curious follow-up.
 """
 
 from __future__ import annotations
@@ -333,5 +334,29 @@ def test_scenario_14_user_says_yes_after_convincing() -> None:
     assert tracker.bot_turned_off
     assert tracker.is_simran_away
     assert tracker.is_saara_away
+
+
+def test_scenario_15_user_generic_occupation_followup() -> None:
+    """15. User gives a generic occupation ('business' or 'college') -> Simran asks one curious follow-up before advancing."""
+    profile = UserDiscoveryProfile(user_id="user_generic_biz", name="Vikram", location="Ahmedabad")
+    tracker = OnboardingTracker(profile=profile)
+
+    # User says "business"
+    tracker.save_field("occupation", "business")
+    assert tracker.is_occupation_generic()
+
+    summary = tracker.get_summary_context()
+    assert "OCCUPATION NOTE" in summary
+    assert "Business mein kya karte ho?" in summary
+
+    # User answers the follow-up with concrete details
+    tracker.save_field("occupation", "Textile and fabric manufacturing")
+    assert not tracker.is_occupation_generic()
+    assert tracker.profile.occupation == "Textile and fabric manufacturing"
+
+    # Subsequent summary clears the follow-up hint
+    summary2 = tracker.get_summary_context()
+    assert "OCCUPATION NOTE" not in summary2
+    assert "Textile and fabric manufacturing" in summary2
 
 

@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-10
 
+### Fixed
+- **Multi-Turn Runaway Speech & Speaking Without User Input**:
+  - Identified root causes of Simran speaking back-to-back turns without waiting for user input:
+    1. `save_profile` was returning `'{"status": "saved"}'` with default blocking tool behavior, which caused LiveKit to request a model reply (`reply_required=True`), prompting Gemini to generate unprompted filler turns like `"Hmm... ruko, soch rahi hoon."`.
+    2. Phase 3 & Phase 4 prompt text lacked turn delimiters, causing the LLM to rush through the live stages question, coins gift, and duet pitch in a single burst.
+    3. Old prompt guidelines stated `"A bot does question, answer, question, answer. A person does not."` with `"FILLER 5% — 'Hmm... ruko, soch rahi hoon.'"`, actively instructing the LLM to speak unprompted.
+  - Implemented comprehensive fixes:
+    - Set `tool_behavior=genai_types.Behavior.NON_BLOCKING` on `RealtimeModel` in `worker.py`.
+    - Made `save_profile` return `None` (`reply_required=False`), enabling LiveKit's automatic `tool_response_scheduling=SILENT` so background tool executions never trigger speech.
+    - Updated `check_available_duets` tool description to forbid pre-emptive invocation before Phase 4.
+    - Filtered out stray thinking filler artifacts (`"Hmm... ruko, soch rahi hoon"`) in `on_item`.
+    - Replaced harmful turn-shape prompt rules with **STRICT TURN-TAKING**: strictly ONE Simran turn per user input, mandatory silence after each turn, and unskippable pauses between Phase 3 Turn 1, Turn 2, and Phase 4.
+  - Added automated test scenario `test_scenario_19_strict_single_turn_and_no_unprompted_speech` (30/30 pytest tests passing).
+
 ### Added
 - **Formality Calibration — Elimination of 'ji' with User Names**:
   - Enforced strict non-negotiable rule forbidding the use of "ji" with user names (e.g. NEVER say "Yuvi ji", "Rahul ji", "[Name] ji").

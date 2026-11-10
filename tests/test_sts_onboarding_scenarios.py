@@ -19,6 +19,7 @@ Scenarios covered:
 16. User tests natural laughter or turns laugh off -> prompt instructions calibrate.
 17. User enters Phase 2 -> opening question asks 'sunte ho ya gaate ho', adapts to listener vs singer, and verifies Phase 2 prompt rules.
 18. User tells name -> Simran addresses user directly by first name without stiff formal 'ji' (no 'Yuvi ji' or 'Rahul ji').
+19. Strict single-turn enforcement -> no runaway turns, mandatory pauses between Phase 3 & 4, and no thinking fillers.
 """
 
 from __future__ import annotations
@@ -431,6 +432,27 @@ def test_scenario_18_no_formal_ji_with_names() -> None:
     assert "Haan ji! Aapka naam" not in prompt
     assert "Hello ji! Chalo shuru" not in prompt
     assert '"Haan ji"' not in prompt.split("NEVER ATTACH")[0]
+
+
+def test_scenario_19_strict_single_turn_and_no_unprompted_speech() -> None:
+    """19. Strict single turn per user input: never speak unprompted, mandatory turn pauses, no fillers."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    # 1. Verify strict single turn rules
+    assert "STRICT TURN-TAKING & NEVER SPEAK WITHOUT USER INPUT" in prompt
+    assert "ONE USER TURN = EXACTLY ONE SIMRAN TURN" in prompt
+    assert "NEVER SPEAK WITHOUT USER INPUT (STRICTLY FORBIDDEN)" in prompt
+    assert "NEVER generate back-to-back speech turns" in prompt
+
+    # 2. Verify harmful filler instruction was removed
+    assert 'FILLER 5% — "Hmm... ruko, soch rahi hoon."' not in prompt
+    assert 'A bot does question, answer, question, answer. A person does not.' not in prompt
+
+    # 3. Verify Phase 3 and Phase 4 have mandatory turn pauses
+    assert "CRITICAL MANDATORY PAUSE: STOP HERE COMPLETELY. DO NOT SHARE THE COINS TIP YET" in prompt
+    assert "CRITICAL MANDATORY PAUSE: STOP HERE COMPLETELY. DO NOT PITCH DUETS YET" in prompt
+    assert "CRITICAL: STOP IMMEDIATELY AND WAIT FOR USER DECISION! DO NOT SPEAK AGAIN" in prompt
+
 
 
 

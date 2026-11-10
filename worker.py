@@ -131,12 +131,12 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Tools definition for Simran
     @llm.function_tool(
-        description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, expectations, duet_attempted, coins_explained). Never mention this tool aloud."
+        description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, expectations, duet_attempted, coins_explained). Runs silently in the background and requires no spoken answer."
     )
-    async def save_profile(field: str, value: str) -> str:
+    async def save_profile(field: str, value: str) -> None:
         clean_val = value.strip().lower()
         if clean_val in {"unknown", "not specified", "none", "n/a", "undefined", "not mentioned"}:
-            return '{"status": "ignored"}'
+            return
         success = tracker.save_field(field, value)
         if success:
             publish_data({
@@ -153,11 +153,9 @@ async def entrypoint(ctx: JobContext) -> None:
                         "balance": bal,
                         "reason": "Welcome Gift & Daily Login Bonus",
                     })
-            return '{"status": "saved"}'
-        return '{"status": "unrecognized"}'
 
     @llm.function_tool(
-        description="Check real-time available duet rooms in RoxStar before recommending a duet to the user."
+        description="Check real-time available duet rooms in RoxStar. Call this tool ONLY at Phase 4 when actively pitching duet choices to the user. Do NOT call in advance during small talk or Phase 1-3."
     )
     async def check_available_duets(genre: str | None = None) -> str:
         rooms = tracker.duet_registry.list_available(genre)
@@ -263,9 +261,10 @@ async def entrypoint(ctx: JobContext) -> None:
             api_version="v1beta",
             input_audio_transcription=transcription_config,
             output_audio_transcription=transcription_config,
+            tool_behavior=genai_types.Behavior.NON_BLOCKING,
             temperature=0.7,
         )
-        logger.info("RealtimeModel initialized with audio transcriptions enabled (api_version=v1beta)")
+        logger.info("RealtimeModel initialized with audio transcriptions & NON_BLOCKING tools enabled (api_version=v1beta)")
     except Exception as e:
         logger.warning("Could not set transcription config (%s), falling back to basic init", e)
         realtime_model = RealtimeModel(
@@ -274,6 +273,7 @@ async def entrypoint(ctx: JobContext) -> None:
             instructions=full_instructions,
             api_key=settings.gemini_api_key,
             api_version="v1beta",
+            tool_behavior=genai_types.Behavior.NON_BLOCKING,
             temperature=0.7,
         )
 
@@ -407,9 +407,15 @@ async def entrypoint(ctx: JobContext) -> None:
         role = getattr(item, "role", None)
         if role == "assistant" and hasattr(item, "text_content") and item.text_content:
             raw_text = str(item.text_content).strip()
-            # Filter out non-speech artifacts, empty lines, and markdown dashes
-            if not raw_text or raw_text in {"---", "--", "-", "...", "null", "none"}:
-                logger.info("Filtered non-speech assistant artifact item: %r", raw_text)
+            # Filter out non-speech artifacts, empty lines, and markdown dashes/fillers
+            clean_check = raw_text.strip().rstrip(".").lower()
+            if not raw_text or raw_text in {"---", "--", "-", "...", "null", "none"} or clean_check in {
+                "hmm... ruko, soch rahi hoon",
+                "hmm ruko soch rahi hoon",
+                "ruko soch rahi hoon",
+                "ruko, soch rahi hoon",
+            }:
+                logger.info("Filtered non-speech assistant artifact/filler item: %r", raw_text)
                 return
             now = time.time()
             if raw_text == last_assistant_item["text"] and (now - last_assistant_item["time"]) < 6.0:

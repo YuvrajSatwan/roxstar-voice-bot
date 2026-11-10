@@ -1,13 +1,14 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 29/29 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: 30/30 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
 ## 1. Completed Tasks (Verified)
 
 ### Core Architecture & Media Pipeline
+- [x] **Strict Turn-Taking & Non-Blocking Silent Tools**: Configured `RealtimeModel` with `tool_behavior=genai_types.Behavior.NON_BLOCKING` and updated `save_profile` to return `None` (`reply_required=False`), enabling automatic `SILENT` tool response scheduling. Eliminated multi-turn runaway speech and prohibited post-tool thinking fillers (`"Hmm... ruko, soch rahi hoon"`).
 - [x] **Direct Speech-to-Speech (S2S) Engine**: Integrated Google Gemini 3.8 Live API (`gemini-3.8-live`) via `livekit-plugins-google.realtime.RealtimeModel` with native bidirectional 24kHz PCM audio streaming.
 - [x] **LiveKit Agent Worker**: Implemented prewarmed worker (`worker.py`) connecting as `sts-simran` with `JobExecutorType.THREAD` and `num_idle_processes=1`.
 - [x] **Concurrent Supervisor**: Implemented `run_sts.py` to concurrently spawn, monitor, and auto-restart `token_server.py` and `worker.py`.

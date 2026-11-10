@@ -9,6 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Phase 2 Music Opener ("Aap Gaane Sunte Ho Ya Gaate Ho?") & Adaptive Branching**:
+  - Reframed the very first question of Phase 2 (Musical Soul) around the user's core intent: *"Chalo ab thodi gaano ki baat karte hain — waise aap gaane sirf sunte ho ya khud bhi gaate ho?"* (or *"Waise aap gaane sirf sunte ho ya khud bhi gunguna lete ho?"*).
+  - Engineered distinct adaptive paths based on user response:
+    - **Path A (Pure Listener)**: Validates the joy of listening (*"Sunne ka bhi alag hi maza hai! Accha music ho toh mood ekdum fresh ho jaata hai"*), explores loop songs and specific genres (Arijit, Punjabi, Retro, Kishore, K-pop, Bhajan, Indie), and shares Simran's late-night listening vibe via the Trade Rule.
+    - **Path B (Singer / Hummer)**: Validates warmly, transitions into the bathroom singer confession (*"Aap purely bathroom singer ho ya doston ke saamne bhi mic pakad lete ho?"*), and bonds over performance anxiety before asking about their favorite singing tracks.
+    - **Path C (Refusal / Decline)**: Smoothly acknowledges (*"Bilkul theek hai, koi baat nahi!"*) and advances straight to Phase 3 without pushing.
+  - Adjusted Phase 3 to eliminate redundant listener-vs-singer questioning, focusing cleanly on live stage exploration and the 50 Welcome Coins perk.
+  - Added automated scenario test `test_scenario_17_phase_2_sunte_ho_ya_gaate_ho_adaptive_branching` bringing the test suite to 28 passing tests.
 - **Natural Laugh Lab & Laughter On/Off Controls**:
   - Implemented authentic Indian girl laughter guidelines in `prompt.py`: spontaneous giggles (`"hehe"`), warm breathy chuckles (`"haha yaar"`), and dramatic teasing laughs (`"haha haaye!"`) sprinkled in ~25% of playful turns.
   - Added full **Turned-Off Laughter** mode: when disabled, Simran maintains a warm, calm, polite conversational tone with zero laughter sounds or chuckles.

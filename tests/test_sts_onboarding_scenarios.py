@@ -17,6 +17,7 @@ Scenarios covered:
 14. User initially hesitates but says YES after convincing.
 15. User gives generic occupation ('business', 'college', 'job') -> one curious follow-up.
 16. User tests natural laughter or turns laugh off -> prompt instructions calibrate.
+17. User enters Phase 2 -> opening question asks 'sunte ho ya gaate ho', adapts to listener vs singer, and verifies Phase 2 prompt rules.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from sts_lab.onboarding import (
     UserDiscoveryProfile,
     UserProfileStore,
 )
+from sts_lab.prompt import SIMRAN_ONBOARDING_SYSTEM_PROMPT
 
 
 def test_scenario_1_new_user_name_and_music() -> None:
@@ -376,5 +378,39 @@ def test_scenario_16_user_toggles_laugh_mode() -> None:
     ctx = tracker.get_summary_context()
     assert "Laughter is TURNED OFF" in ctx
     assert "DO NOT chuckle, giggle, or emit 'haha'/'hehe' tokens" in ctx
+
+
+def test_scenario_17_phase_2_sunte_ho_ya_gaate_ho_adaptive_branching() -> None:
+    """17. User enters Phase 2 -> opening question asks 'sunte ho ya gaate ho' with adaptive branching."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    # 1. Verify Phase 2 header and mandatory opener
+    assert "## Phase 2 — MUSICAL SOUL & LISTENER VS SINGER CHECK" in prompt
+    assert "QUESTION 1 (MANDATORY OPENER OF PHASE 2)" in prompt
+    assert "waise aap gaane sirf sunte ho ya khud bhi gaate ho?" in prompt
+
+    # 2. Verify adaptive branching paths
+    assert "PATH A — USER SAYS THEY ONLY LISTEN" in prompt
+    assert "Sunne ka bhi alag hi maza hai!" in prompt
+    assert "PATH B — USER SAYS THEY SING OR HUM" in prompt
+    assert "Aap purely bathroom singer ho ya doston ke saamne bhi mic pakad lete ho?" in prompt
+    assert "PATH C — CLEAR USER REFUSAL / NO INTEREST" in prompt
+
+    # 3. Verify Phase 3 does not duplicate the listener vs singer check
+    assert "Toh yahan sirf sunne aaye ho ya khud bhi gaoge?" not in prompt
+    assert "Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?" in prompt
+    assert "50 welcome coins unlock karwaye hain" in prompt
+
+    # 4. Functional tracker flow for a listener:
+    profile = UserDiscoveryProfile(user_id="user_listener_only", name="Rohan")
+    tracker = OnboardingTracker(profile=profile)
+    tracker.save_field("music_taste", "Arijit Singh")
+    tracker.save_field("music_taste", "Indie Acoustic")
+
+    assert "music_taste" in tracker.discovered_topics
+    assert tracker.profile.music_taste == ["Arijit Singh", "Indie Acoustic"]
+    summary = tracker.get_summary_context()
+    assert "Music Taste: Arijit Singh, Indie Acoustic" in summary
+
 
 

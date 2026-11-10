@@ -239,27 +239,6 @@ body {
   font-size: 10px;
 }
 
-/* Nav Link */
-.nav-link-cascade {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--ink-3);
-  text-decoration: none;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  transition: all var(--dur) var(--ease);
-}
-
-.nav-link-cascade:hover {
-  color: var(--ink);
-  background: var(--surface-sunken);
-  border-color: var(--surface-border-strong);
-}
-
 /* Error Alert */
 .room-error-alert {
   margin-top: 12px;
@@ -3348,10 +3327,6 @@ body {
   .telemetry-pill {
     padding: 3px 8px;
     font-size: 10px;
-  }
-
-  .nav-link-cascade {
-    display: none;
   }
 
   /* Show mobile segmented tab switcher */

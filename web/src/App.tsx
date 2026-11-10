@@ -6,7 +6,7 @@ import { Controls } from './components/Controls';
 import { TooltipOverlay } from './components/TooltipOverlay';
 import { KaraokeStageBar } from './components/KaraokeStageBar';
 import { DiscoveryProfileBadge } from './components/DiscoveryProfileBadge';
-import { ArrowUpRight, Coins, MessageSquare, Mic, Music2, Sparkles, Zap } from 'lucide-react';
+import { Coins, MessageSquare, Mic, Music2, Sparkles, Zap } from 'lucide-react';
 
 export function App() {
   const [userName, setUserName] = useState('Rahul');
@@ -104,18 +104,6 @@ export function App() {
             <span>{ttfa}ms</span>
             <span className="telemetry-pill__sub">S2S</span>
           </div>
-
-          {/* Cascade UI Link */}
-          <a
-            href="http://127.0.0.1:5174"
-            target="_blank"
-            rel="noreferrer"
-            className="nav-link-cascade"
-            title="Switch to Dual-Bot (Kabir & Simran) Cascade UI"
-          >
-            <span>Dual-Bot</span>
-            <ArrowUpRight size={13} />
-          </a>
         </div>
       </header>
 

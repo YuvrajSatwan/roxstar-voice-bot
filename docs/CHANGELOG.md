@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased] - 2026-11-10
 
 ### Added
+- **Natural Hindi Branching for YES vs NO Responses Post-Convincing**:
+  - Implemented explicit branching in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) for post-convincing responses:
+    - **When user says YES**: Saara enthusiastically celebrates in natural Hindi (*"Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki tum dono mast jam karo. Aag laga dena, bye!"*), immediately calls `navigate_to_duet` or `navigate_to_recording`, and cleanly powers off.
+    - **When user says NO**: Saara delivers Attempt 2 warm reassurance (*"Arre koi baat nahi! Jab bhi mann kare na, bas apna favourite gaana gaa kar post kar dena. Main pakka sunungi aur comment bhi karungi!"*), or triggers the 2-decline sign-off with zero pressure if declined twice.
+  - Updated duet and solo stage handoff excuses in [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py) to celebrate the user's singing decision rather than making work excuses.
+  - Added automated test scenario `test_scenario_14_user_says_yes_after_convincing` in [`tests/test_sts_onboarding_scenarios.py`](file:///y:/roxstar/sts_lab/tests/test_sts_onboarding_scenarios.py) (23/23 tests passing).
 - **2-Attempt Singing Encouragement Flow Before Sign-Off**:
   - Implemented a two-step conversational encouragement journey in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) for users who hesitate or state they cannot sing ("nahi aata", "sharm aati hai"):
     - **Attempt 1**: Warm reassurance that Roxstar is zero-pressure and no perfect singer is needed, offering Duet as a fun way to blend their voice with someone else.

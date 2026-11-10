@@ -50,20 +50,20 @@ SAARA_SIGNOFF_EXCUSES: list[str] = [
     "Yaar deadline yaad aa gayi achaanak! Chalti hoon, tum gaake dikhana, bye!",
 ]
 
-# Realistic excuses & handoff reasons when Saara signs off as user joins duet (strictly under 25 words)
+# Enthusiastic natural Hindi handoff lines when user agrees to join a duet (strictly under 25 words)
 SAARA_DUET_HANDOFF_EXCUSES: list[str] = [
-    "Room khul gaya, 'Join Duet' dabao! Client ka urgent ping aa gaya mera, main nikalti hoon. Aag laga dena, bye!",
-    "Zabardast choice! Mummy chai ke liye aawaz de rahi hain toh main bhaagi, tum stage pe rock karna, bye bye!",
-    "Duet stage ready hai screen pe! Main mic chodti hoon taaki tum dono mast jam karo. All the best, bye!",
-    "Door bell baji, lagta hai Swiggy aa gaya! Main nikal rahi hoon, tum stage pe aag lagao, bye!",
+    "Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki tum dono mast jam karo. Aag laga dena, bye!",
+    "Zabardast choice! Duet stage ready hai, dil khol ke gaao aur rock karna. All the best, bye bye!",
+    "Sahi hai yaar! Room ready ho gaya screen pe, main mic chhodti hoon. Poori aag laga dena, bye!",
+    "Kya baat hai! Duet stage khul gaya, ab tum dono milke dhoom machao. All the best, bye!",
 ]
 
-# Realistic excuses & handoff reasons when user agrees to solo recording (strictly under 25 words)
+# Enthusiastic natural Hindi handoff lines when user agrees to solo recording (strictly under 25 words)
 SAARA_SOLO_HANDOFF_EXCUSES: list[str] = [
-    "Studio stage khul gaya screen pe! Laptop 4 percent pe aa gaya mera, main bhaagi. Solo mic pe aag lagao, bye!",
-    "Mast choice! Mummy chai ke liye aawaz de rahi hain toh main nikalti hoon. Dil khol ke gaana, bye bye!",
-    "Recording stage ready hai! Client ka urgent ping aa gaya mera, main bhaagi. All the best, rock karna, bye!",
-    "Door bell baj gayi, lagta hai mera parcel aa gaya! Main nikal rahi hoon, tum solo mic pe aag lagao, bye!",
+    "Zabardast! Studio mic ready hai screen pe, dil khol ke gaana aur rock karna. All the best, bye!",
+    "Mast choice! Recording stage khul gaya screen pe, poori aag laga dena. Dil khol ke gaao, bye bye!",
+    "Yeh hui na baat! Mic live hai studio mein, all the best aur rock karna, bye!",
+    "Sahi hai yaar! Recording screen pe aa gayi hai, khul ke gaana. All the best, bye!",
 ]
 
 

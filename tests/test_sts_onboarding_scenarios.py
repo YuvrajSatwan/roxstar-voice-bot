@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from sts_lab.onboarding import (
+    SAARA_DUET_HANDOFF_EXCUSES,
     SAARA_SIGNOFF_EXCUSES,
     DuetRoom,
     DuetRoomRegistry,
@@ -298,5 +299,30 @@ def test_scenario_13_user_says_cannot_sing_two_attempt_encouragement() -> None:
     assert "SIGN-OFF STATUS (CRITICAL)" in summary2
     excuse = tracker.get_random_excuse()
     assert excuse in SAARA_SIGNOFF_EXCUSES
+
+
+def test_scenario_14_user_says_yes_after_convincing() -> None:
+    """14. User initially hesitates but says YES after convincing -> Saara celebrates and hands off stage cleanly."""
+    registry = DuetRoomRegistry([
+        DuetRoom(room_id="duet-romantic", title="Romantic Jam", genre="Romantic", host_name="Rhea", song_title="Tum Hi Ho")
+    ])
+    profile = UserDiscoveryProfile(user_id="user_convinced", name="Aakash", music_taste=["Romantic"])
+    tracker = OnboardingTracker(profile=profile, duet_registry=registry)
+
+    # User hesitates, Saara suggests duet
+    can_suggest, _, room = tracker.suggest_duet()
+    assert can_suggest
+    assert room is not None
+    assert tracker.action_nudge_count == 1
+
+    # User says YES ("Haan chalo try karte hain") -> duet handoff celebration in natural Hindi
+    duet_handoff = tracker.get_random_duet_handoff_reason()
+    assert duet_handoff in SAARA_DUET_HANDOFF_EXCUSES
+    assert any(w in duet_handoff for w in ["Yeh hui na baat", "Zabardast", "Sahi hai", "Kya baat"])
+
+    # Bot marks turned off for duet
+    tracker.mark_bot_turned_off("User entered live duet stage")
+    assert tracker.bot_turned_off
+    assert tracker.is_saara_away
 
 

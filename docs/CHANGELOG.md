@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-11
 
+### Fixed
+- **Missing Bot Response After User Input (Unresponsive Turn Bug)**:
+  - **Root Cause Identified from Live Server Logs**: `save_profile` was returning `None` (`-> None`), which LiveKit marked as `reply_required=False`. With `tool_behavior=NON_BLOCKING`, LiveKit sent `tool_response_scheduling=SILENT` ("do not interrupt or trigger generation") to Gemini 3.8 Live API. Whenever the user provided their name, city, or occupation, Gemini executed `save_profile` and suppressed audio generation completely, forcing the user to speak a second time before Simran would reply.
+  - **Tool Return & Response Scheduling**: Updated `save_profile` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) to return a confirmation string (`return f"Saved {field}='{value}'. Now respond to the user immediately."`), setting `reply_required=True` so Gemini generates its spoken response without delay.
+  - **Interruption Threshold Tuning**: Reduced `turn_handling.interruption.min_duration` from `0.7s` to `0.35s` and set `min_consecutive_speech_delay=0.0` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py), preventing natural 1-word user answers (*"Yuvi"*, *"Rahul"*, *"Haan"*) right as the greeting finishes from being discarded as false interruptions.
+  - **Prompt Directive**: Added explicit rule in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) enforcing that Simran must respond immediately to every user utterance and never wait for the user to speak twice.
+
 ### Changed
 - **100% Real-Person Identity & Zero AI Admission (Non-Negotiable Guardrail)**:
   - Enforced critical non-negotiable rule in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py): Simran must NEVER admit, mention, or state that she is an AI, bot, virtual host, assistant, software, or computer system under ANY circumstance or pressure.

@@ -131,12 +131,12 @@ async def entrypoint(ctx: JobContext) -> None:
 
     # Tools definition for Simran
     @llm.function_tool(
-        description="Silently save a discovered user profile field (name, location, occupation, hobbies, music_taste, favorite_song, musical_role, singing_comfort, referral_source, expectations, duet_attempted, coins_explained). Runs silently in the background and requires no spoken answer."
+        description="Save a discovered user profile field (name, location, occupation, hobbies, music_taste, favorite_song, musical_role, singing_comfort, referral_source, expectations, duet_attempted, coins_explained). Always continue the conversation naturally and respond to the user immediately after saving."
     )
-    async def save_profile(field: str, value: str) -> None:
+    async def save_profile(field: str, value: str) -> str:
         clean_val = value.strip().lower()
         if clean_val in {"unknown", "not specified", "none", "n/a", "undefined", "not mentioned"}:
-            return
+            return "ok"
         success = tracker.save_field(field, value)
         if success:
             publish_data({
@@ -153,6 +153,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "balance": bal,
                         "reason": "Welcome Gift & Daily Login Bonus",
                     })
+        return f"Saved {field}='{value}'. Now respond to the user immediately."
 
     @llm.function_tool(
         description="Check real-time available duet rooms in RoxStar. Call this tool ONLY at Phase 4 when actively pitching duet choices to the user. Do NOT call in advance during small talk or Phase 1-3."
@@ -286,14 +287,14 @@ async def entrypoint(ctx: JobContext) -> None:
         turn_handling={
             "interruption": {
                 "enabled": True,
-                "min_duration": 0.7,
+                "min_duration": 0.35,
                 "resume_false_interruption": False,
             },
             "preemptive_generation": {
                 "enabled": False,
             },
         },
-        min_consecutive_speech_delay=0.15,
+        min_consecutive_speech_delay=0.0,
     )
 
     async def turn_off_bot(reason: str = "onboarding_completed") -> None:

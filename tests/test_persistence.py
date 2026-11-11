@@ -63,6 +63,13 @@ def test_url_resolution_rewrites_drivers() -> None:
     assert resolve_database_url(None).startswith("sqlite+aiosqlite://")
 
 
+def test_url_resolution_accepts_libpq_params_from_neon() -> None:
+    url = resolve_database_url("postgresql://u:p@h-pooler.neon.tech/db?channel_binding=require&sslmode=require")
+    assert url.startswith("postgresql+asyncpg://u:p@h-pooler.neon.tech/db")
+    assert "sslmode" not in url and "channel_binding" not in url
+    assert "ssl=require" in url
+
+
 def test_session_user_and_messages_are_created(tmp_path: Path) -> None:
     url = _url(tmp_path)
     sid = _run_session(url, fields={"name": "Rahul", "location": "Pune", "musical_role": "singer",

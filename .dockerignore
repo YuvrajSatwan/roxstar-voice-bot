@@ -6,6 +6,7 @@ __pycache__
 web/node_modules
 web/dist
 .env
+.env.local
 .sts_users.json
 *.db
 *.db-wal

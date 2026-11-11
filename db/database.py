@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -40,7 +41,28 @@ def resolve_database_url(url: str | None = None) -> str:
         raw = "postgresql+asyncpg://" + raw[len("postgresql://"):]
     elif raw.startswith("sqlite://") and not raw.startswith("sqlite+"):
         raw = "sqlite+aiosqlite://" + raw[len("sqlite://"):]
+    if raw.startswith("postgresql+asyncpg://"):
+        raw = _asyncpg_query(raw)
     return raw
+
+
+def _asyncpg_query(raw: str) -> str:
+    """Make a libpq-style URL (as Neon, Supabase and Render hand out) usable by asyncpg.
+
+    asyncpg rejects ``sslmode`` and ``channel_binding``. ``sslmode`` becomes the equivalent
+    ``ssl`` value and ``channel_binding`` is dropped. Credentials are left untouched.
+    """
+    parts = urlsplit(raw)
+    if not parts.query:
+        return raw
+    kept: list[tuple[str, str]] = []
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if key == "channel_binding":
+            continue
+        if key == "sslmode":
+            key = "ssl"
+        kept.append((key, value))
+    return urlunsplit(parts._replace(query=urlencode(kept)))
 
 
 def redact_url(url: str) -> str:
@@ -62,7 +84,10 @@ class Database:
         if self.is_sqlite:
             kwargs["connect_args"] = {"timeout": 30}
         else:
-            kwargs.update(pool_size=3, max_overflow=2, pool_pre_ping=True)
+            # statement_cache_size=0 keeps asyncpg working through PgBouncer-style poolers
+            # (Neon "-pooler" endpoints); pool_pre_ping revives connections after auto-suspend.
+            kwargs.update(pool_size=3, max_overflow=2, pool_pre_ping=True,
+                          connect_args={"statement_cache_size": 0})
         self.engine: AsyncEngine = create_async_engine(self.url, **kwargs)
         if self.is_sqlite:
             @event.listens_for(self.engine.sync_engine, "connect")

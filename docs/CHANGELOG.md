@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - New `tests/test_persistence.py` (13 tests: schema and turn logging, metric attachment, rapid turns without loop stalls, DB outage and recovery, queue overflow, exit reasons, stage inference, admin auth, filters, flagging, export). New dependencies: `sqlalchemy[asyncio]`, `aiosqlite`, `asyncpg`. New env vars: `DATABASE_URL`, `STS_DB_ENABLED`, `ADMIN_API_KEY`.
 
 ### Changed
+- **Neon PostgreSQL support**: `db/database.py` now accepts libpq-style URLs as issued by Neon (`sslmode`, `channel_binding`), converting them for `asyncpg`, and disables asyncpg's statement cache so Neon's pooled (`-pooler`) endpoints work. Added a regression test (50 tests passing). `.dockerignore` now also excludes `.env.local` and `.sts_users.json`. The Neon CLI also added `neon.ts`, a root `package.json` (Neon config packages only) and `.neon` (gitignored).
 - **Render deployment**: [`render.yaml`](file:///y:/roxstar/sts_lab/render.yaml) now declares `DATABASE_URL` and `ADMIN_API_KEY` as `sync: false` placeholders so Render prompts for them in the dashboard (values are never stored in the repo). Without a permanent `DATABASE_URL`, conversations go to a local SQLite file that Render wipes on every redeploy.
 
 ### Fixed

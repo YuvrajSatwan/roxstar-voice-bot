@@ -12,6 +12,9 @@ const STS_TOKEN_URL =
     ? 'http://127.0.0.1:8001'
     : '');
 
+/** Base URL of the backend (token server + admin API). */
+export const API_BASE: string = STS_TOKEN_URL;
+
 export interface StsSession {
   url: string;
   token: string;
@@ -40,7 +43,7 @@ export async function requestStsSession(name: string, room?: string): Promise<St
     room: data.room,
     persona: data.persona || 'Simran',
     model: data.model || 'gemini-3.8-live',
-    voice: data.voice || 'Sulafat',
+    voice: data.voice || 'Leda',
   };
 }
 

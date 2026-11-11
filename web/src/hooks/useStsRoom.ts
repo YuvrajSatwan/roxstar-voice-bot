@@ -65,7 +65,7 @@ export function useStsRoom() {
   const [simranState, setSimranState] = useState<SimranState>('idle');
   const [telemetry, setTelemetry] = useState<StsTelemetry>({
     model: 'gemini-3.8-live',
-    voice: 'Sulafat',
+    voice: 'Leda',
   });
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [audioLevel, setAudioLevel] = useState(0);

@@ -65,7 +65,7 @@ export const LatencyCard: React.FC<LatencyCardProps> = ({ telemetry }) => {
         </div>
         <div className="spec-item">
           <Radio size={12} />
-          <span>Voice: <strong>Sulafat (Warm Hinglish)</strong></span>
+          <span>Voice: <strong>Leda (Warm Hinglish)</strong></span>
         </div>
       </div>
     </div>

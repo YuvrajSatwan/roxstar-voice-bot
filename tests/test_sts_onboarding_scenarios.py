@@ -430,7 +430,7 @@ def test_scenario_18_no_formal_ji_with_names() -> None:
 
     # 2. Verify name response template does not include '[Name] ji'
     assert "[Name] ji!" not in prompt
-    assert "[Name]! Main Simran. Aap kahan se ho?" in prompt
+    assert "[Name]! Aap kahan se ho?" in prompt
 
     # 3. Verify opener angles and reaction list do not use 'Haan ji' or 'Hello ji'
     assert "Haan ji! Aapka naam" not in prompt
@@ -521,7 +521,7 @@ def test_scenario_21_city_is_asked_and_saved_without_commenting() -> None:
     assert "never comment on, praise, judge or stereotype any city" in prompt
     assert "DO NOT ask the user for their city" not in prompt
     # Delhi is only revealed after the user shares or asks
-    assert "mention Delhi only AFTER" in prompt
+    assert "do not mention where you are from unless they ask" in prompt
 
     # 2. A new user with a name but no city is steered to ask the city next
     tracker = OnboardingTracker(profile=UserDiscoveryProfile(user_id="user_city_flow"))
@@ -586,3 +586,24 @@ def test_scenario_23_ai_status_never_admitted_and_100_percent_human() -> None:
     )
     import re
     assert not any(re.search(r"(ai|robot|bot)", line.lower()) for line in spoken_lines)
+
+
+def test_scenario_24_about_simran_only_when_asked_and_question_last() -> None:
+    """24. Simran shares nothing about herself unless asked, and any question is the last thing in her turn."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    assert "ABOUT YOU, ONLY WHEN ASKED (CRITICAL, NON-NEGOTIABLE)" in prompt
+    assert "You never tell the user anything about yourself unless they directly ask" in prompt
+    assert "QUESTION LAST" in prompt
+    assert "the very last thing you say" in prompt
+
+    # Old volunteer-a-detail behaviours are gone
+    assert "CONFESS / SHARE" not in prompt
+    assert "THE TRADE RULE" not in prompt
+    assert "share ONE detail of your own" not in prompt
+    assert "Introduce yourself as Simran" not in prompt
+
+    # Opening lines say nothing about Simran herself
+    opening = prompt.split("# OPENING, PICK ONE AT RANDOM")[1].split("# STRICT TURN-TAKING")[0]
+    for personal in ["earphone", "chai", "bore ho rahi", "free hui", "uthi hoon", "raat ka ullu"]:
+        assert personal not in opening

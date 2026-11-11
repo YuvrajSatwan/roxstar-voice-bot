@@ -1,16 +1,17 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 34/34 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: 49/49 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
 ## 1. Completed Tasks (Verified)
 
 ### Core Architecture & Media Pipeline
+- [x] **Conversation Persistence, Analytics API & Admin Dashboard (2026-11-11)**: `db/` package, non-blocking recorder wired into `worker.py`, `/api/admin/*` endpoints, `/admin` review UI, 13 new tests. Remaining before production: consent notice and retention policy, Alembic migrations, real Roxstar user ID as identity, restrict CORS. See `docs/ADMIN_DASHBOARD.md` section 7.
 - [x] **100% Real-Person Identity & Zero AI Admission**: Enforced non-negotiable rule in `prompt.py` and documentation (`WORKFLOW.md`). Simran acts 100% like a real 22-year-old freelance graphic designer from Delhi with her own life. She never admits to being an AI, bot, virtual host, or software under any circumstance or persistent questioning, playfully laughing it off and steering back to music.
 - [x] **Comprehensive Discovery Profile & Sensible First-Interaction Intro**: Expanded `UserDiscoveryProfile` and `save_profile` with `referral_source`, `musical_role`, `singing_comfort`, and `favorite_song` fields alongside `name`, `location`, `occupation`, `hobbies`, `music_taste`, `expectations`, `duet_attempted`, and `coins_explained`. Replaced Phase 3 "saw other rooms" question with authentic Roxstar community introduction.
-- [x] **Strict Turn-Taking & Non-Blocking Silent Tools**: Configured `RealtimeModel` with `tool_behavior=genai_types.Behavior.NON_BLOCKING` and updated `save_profile` to return `None` (`reply_required=False`), enabling automatic `SILENT` tool response scheduling. Eliminated multi-turn runaway speech and prohibited post-tool thinking fillers (`"Hmm... ruko, soch rahi hoon"`).
+- [x] **Strict Turn-Taking & Non-Blocking Silent Tools**: Configured `RealtimeModel` with `tool_behavior=genai_types.Behavior.NON_BLOCKING` and updated `save_profile` to return a short confirmation string (`reply_required=True`, so Gemini speaks its reply immediately instead of the turn being silently suppressed; see the 2026-11-11 CHANGELOG fix). Eliminated multi-turn runaway speech and prohibited post-tool thinking fillers (`"Hmm... ruko, soch rahi hoon"`).
 - [x] **Direct Speech-to-Speech (S2S) Engine**: Integrated Google Gemini 3.8 Live API (`gemini-3.8-live`) via `livekit-plugins-google.realtime.RealtimeModel` with native bidirectional 24kHz PCM audio streaming.
 - [x] **LiveKit Agent Worker**: Implemented prewarmed worker (`worker.py`) connecting as `sts-simran` with `JobExecutorType.THREAD` and `num_idle_processes=1`.
 - [x] **Concurrent Supervisor**: Implemented `run_sts.py` to concurrently spawn, monitor, and auto-restart `token_server.py` and `worker.py`.
@@ -20,7 +21,7 @@
 - [x] **Elimination of 'ji' Formality with User Names**: Enforced non-negotiable rule forbidding "ji" attached to user names (no "Yuvi ji", "Rahul ji", "[Name] ji"). Simran addresses users directly by first name ("Yuvi!", "Rahul!"), preserving friendly peer intimacy while retaining respectful "aap" pronouns.
 - [x] **Phase 2 Music Opener ("Aap Gaane Sunte Ho Ya Gaate Ho?") & Adaptive Branching**: Replaced generic Phase 2 opener with the core question *"Chalo ab thodi gaano ki baat karte hain — waise aap gaane sirf sunte ho ya khud bhi gaate ho?"*, branching organically for pure listeners (genre/loop song validation + listening habits) versus singers/hummers (bathroom singer check + performance anxiety bond). Removed duplicate questioning in Phase 3.
 - [x] **Natural Laughter & Laughter-Off Mode**: Authored authentic Hindi laughter guidelines in `prompt.py` (spontaneous giggles `"hehe"`, warm breathy chuckles `"haha yaar"`, dramatic teasing laughs `"haha haaye!"`). Added full Turned-Off Laughter mode in `OnboardingTracker` allowing users to suppress laughter for a calm, composed tone.
-- [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Prohibits commentary, critiques, or clichés about any city. City probing was restored on 2026-11-10: Simran asks the user's city once in Phase 1 and saves it silently (`save_profile(location)`), and reveals Delhi only after the user shares theirs or asks.
+- [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Prohibits commentary, critiques, or clichés about any city. City probing was restored on 2026-11-10: Simran asks the user's city once in Phase 1 and saves it silently (`save_profile(location)`), and reveals Delhi only if the user asks (About-You Rule: she shares nothing about herself unless asked).
 - [x] **Production Voice Polish (2026-11-10)**: Calmer greeting and handoffs, "aap"-only register, deduplicated prompt rules, no volunteering of AI status (honest one-line answer only to sincere questions), cleaned duet data. See `CHANGELOG.md`.
 - [x] **Curious Follow-Up on Generic Occupation Answers**: Engineered natural conversation deepening when users give generic occupation responses (e.g., "business", "job", "college", "student", "freelance", "startup"). Instead of instantly jumping to hobbies or music, Simran asks exactly one natural, curious follow-up ("Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai?") before sharing her design work and advancing. Backed by `is_generic_occupation()` detection and dynamic LLM context guidance in `OnboardingTracker`.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
@@ -72,7 +73,7 @@
 
 ## 2. Currently Ongoing Tasks
 
-- [ ] **Voice Parameter Alignment**: Harmonize default voice string between `config.py` (`Leda`) and `web/src/hooks/useStsRoom.ts` (`Sulafat`).
+- [x] **Voice Parameter Alignment (2026-11-11)**: Frontend fallback/display voice labels now default to `Leda`, matching `config.py`. The backend still reports the real voice via telemetry.
 
 ---
 
@@ -95,9 +96,9 @@
 
 ## 4. Known Bugs, Technical Debt & Blockers
 
-- **Voice Label Mismatch**:
-  - *Detail*: `config.py` defaults to `Leda`, while `useStsRoom.ts` displays `Sulafat` in the telemetry pill before backend state syncs.
-  - *Impact*: Minor visual inconsistency until backend sends telemetry packet.
+- **Voice Label Mismatch** (resolved 2026-11-11):
+  - *Detail*: UI fallback labels were `Sulafat` while `config.py` defaults to `Leda`; all UI defaults are now `Leda`.
+  - *Impact*: None remaining.
 - **Python Execution on Windows**:
   - *Detail*: Global `python` or `pytest` may not be registered in system PATH; running via `py -m pytest tests/` or `py run_sts.py` is required.
   - *Impact*: Documented in [`AGENTS.md`](file:///y:/roxstar/sts_lab/AGENTS.md) and [`docs/PROJECT_CONTEXT.md`](file:///y:/roxstar/sts_lab/docs/PROJECT_CONTEXT.md).
@@ -108,6 +109,7 @@
 
 ## 5. Next Recommended Development Steps
 
-1. Harmonize default voice parameter between `config.py` and `web/src/hooks/useStsRoom.ts`.
-2. Add a lightweight test script to verify token server endpoints (`GET /health`, `POST /token`) in automated CI.
+1. Add a lightweight test script to verify token server endpoints (`GET /health`, `POST /token`) in automated CI.
+2. Before production: lock down CORS (currently reflects any `Origin`), and make sure the admin API's no-key localhost mode cannot be reached through a reverse proxy (set `ADMIN_API_KEY`).
+3. Lazy-load the speaking-orb code to shrink the ~843 kB main bundle.
 

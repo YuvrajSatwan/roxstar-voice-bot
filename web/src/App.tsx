@@ -102,7 +102,7 @@ export function App() {
           {/* Direct Speech-to-Speech Telemetry Pill */}
           <div
             className="telemetry-pill"
-            title={`Direct Gemini 3.8 Live Speech-to-Speech (TTFA: ${ttfa}ms, Voice: Sulafat)`}
+            title={`Direct Gemini 3.8 Live Speech-to-Speech (TTFA: ${ttfa}ms, Voice: Leda)`}
           >
             <Zap size={12} className="telemetry-pill__icon" />
             <span>{ttfa}ms</span>

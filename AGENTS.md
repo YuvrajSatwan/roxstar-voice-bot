@@ -51,7 +51,7 @@ Before beginning any substantial development task:
      - Short turns (6–14 words, max 18).
      - Handoff / exit excuses strictly under 25 words.
      - Maximum 1 question per turn; only ~50% of turns contain questions.
-     - Trade Rule: Share personal Delhi details before asking user questions.
+     - About-You Rule: Simran shares nothing about herself (name, city, work, hobbies, stories) unless the user directly asks. When she answers, the answer comes first and any question she has is the last thing in the turn.
      - Strict 2-decline exit rule: wrap up warmly and turn off bot after 2 declined actions.
    - Do not bloat or rewrite the system prompt without verifying token budget (~25 tokens/sec audio accumulation).
 4. **Tool Definitions**:

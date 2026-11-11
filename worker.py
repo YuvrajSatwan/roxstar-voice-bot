@@ -1,7 +1,7 @@
 """LiveKit STS Worker: Powered by Google Gemini 3.8 Live API.
 
 Direct speech-to-speech without traditional cascaded STT->LLM->TTS steps.
-Single persona: Simran (AI Sathi & Tech Consultant) with 'Sulafat' voice.
+Single persona: Simran (22-year-old Delhi music host) with the voice set by STS_VOICE (default 'Leda').
 """
 
 from __future__ import annotations
@@ -51,9 +51,8 @@ from livekit.plugins.google.realtime import RealtimeModel
 from sts_lab.config import StsSettings
 from sts_lab.prompt import (
     SIMRAN_ONBOARDING_SYSTEM_PROMPT,
-    SAARA_ONBOARDING_SYSTEM_PROMPT,
-    SARAAH_STS_SYSTEM_PROMPT,
 )
+from sts_lab.db import create_recorder
 from sts_lab.onboarding import (
     DuetRoomRegistry,
     OnboardingTracker,
@@ -120,6 +119,18 @@ async def entrypoint(ctx: JobContext) -> None:
     tracker = OnboardingTracker(profile=profile, store=store)
     logger.info("Initialized fresh OnboardingTracker for new visitor user=%s", tracker.profile.user_id)
 
+    # Non-blocking conversation persistence: every call below only enqueues work,
+    # a background task writes to the database, so the audio loop is never awaited on I/O.
+    recorder = create_recorder(
+        room_name=ctx.room.name, identity=initial_user, model=settings.model, voice=settings.voice,
+    )
+    recorder.start()
+
+    @ctx.room.on("participant_connected")
+    def on_participant_connected(p: rtc.RemoteParticipant) -> None:
+        if is_human_participant(p) and p.identity:
+            recorder.set_identity(p.identity)
+
     # State tracking for Simran sign-off and turning off the bot
     sign_off_state = {
         "in_progress": False,
@@ -139,6 +150,7 @@ async def entrypoint(ctx: JobContext) -> None:
             return "ok"
         success = tracker.save_field(field, value)
         if success:
+            recorder.record_profile_field(field, value)
             publish_data({
                 "type": "roxstar.user_state",
                 "profile": tracker.profile.to_dict(),
@@ -147,6 +159,7 @@ async def entrypoint(ctx: JobContext) -> None:
             if field.strip().lower() == "coins_explained":
                 bal, freshly_awarded = tracker.award_welcome_coins(50)
                 if freshly_awarded:
+                    recorder.record_coin_balance(bal)
                     publish_data({
                         "type": "roxstar.coins_awarded",
                         "amount": 50,
@@ -159,6 +172,7 @@ async def entrypoint(ctx: JobContext) -> None:
         description="Check real-time available duet rooms in RoxStar. Call this tool ONLY at Phase 4 when actively pitching duet choices to the user. Do NOT call in advance during small talk or Phase 1-3."
     )
     async def check_available_duets(genre: str | None = None) -> str:
+        recorder.set_stage(4)  # the duet pitch (Phase 4) has been reached
         rooms = tracker.duet_registry.list_available(genre)
         if not rooms:
             return "No duet rooms currently available."
@@ -176,6 +190,8 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def navigate_to_duet(room_id: str) -> str:
         logger.info("Directing user to duet room: %s", room_id)
+        recorder.mark_exit("duet_handoff")
+        recorder.set_stage(4)
         tracker.save_field("duet_attempted", "true")
         room_info = tracker.duet_registry.get_room(room_id)
         song_title = room_info.song_title if room_info else "the song"
@@ -216,6 +232,8 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def navigate_to_recording(song_title: str = "Tum Hi Ho") -> str:
         logger.info("Directing user to solo recording stage: %s", song_title)
+        recorder.mark_exit("solo_handoff")
+        recorder.set_stage(4)
         tracker.save_field("duet_attempted", "true")
         handoff_excuse = tracker.get_random_solo_handoff_reason()
         tracker.mark_simran_away(handoff_excuse)
@@ -356,8 +374,14 @@ async def entrypoint(ctx: JobContext) -> None:
     def on_metrics(ev: MetricsCollectedEvent) -> None:
         if isinstance(ev.metrics, RealtimeModelMetrics):
             m = ev.metrics
-            ttfa_ms = round(m.ttft * 1000, 1) if m.ttft is not None else None
+            # LiveKit reports -1 when TTFT is unknown; never publish or store negative latency
+            ttfa_ms = round(m.ttft * 1000, 1) if m.ttft is not None and m.ttft >= 0 else None
             logger.info("STS Metrics: ttft=%s ms, tokens/sec=%s", ttfa_ms, m.tokens_per_second)
+            recorder.record_metrics(
+                ttfa_ms,
+                round(m.tokens_per_second, 1) if m.tokens_per_second else None,
+                round(m.duration, 2) if m.duration else None,
+            )
             publish_data({
                 "type": "roxstar.sts.telemetry",
                 "ttfa_ms": ttfa_ms,
@@ -393,6 +417,8 @@ async def entrypoint(ctx: JobContext) -> None:
         text = getattr(ev, "transcript", None) or getattr(ev, "text", "")
         if text and text.strip():
             logger.info("User transcribed: %s (final=%s)", text, ev.is_final)
+            if ev.is_final:
+                recorder.record_user_turn(text)
             publish_data({
                 "type": "roxstar.sts.transcript",
                 "speaker": "You",
@@ -425,6 +451,7 @@ async def entrypoint(ctx: JobContext) -> None:
             last_assistant_item["text"] = raw_text
             last_assistant_item["time"] = now
             logger.info("Simran item: %s", raw_text)
+            recorder.record_assistant_turn(raw_text)
             publish_data({
                 "type": "roxstar.sts.transcript",
                 "speaker": "Simran",
@@ -443,6 +470,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 text = str(data.get("text", "")).strip()
                 if text:
                     logger.info("Received user chat text: %s", text)
+                    recorder.record_user_turn(text)
                     if tracker.is_simran_away:
                         lower_text = text.lower()
                         if "simran" in lower_text or "saara" in lower_text or "saraah" in lower_text or "kahan" in lower_text or "back" in lower_text:
@@ -466,6 +494,7 @@ async def entrypoint(ctx: JobContext) -> None:
                             return
                     elif tracker.should_sign_off():
                         excuse = tracker.get_random_excuse()
+                        recorder.mark_exit("two_decline_exit")
                         tracker.mark_simran_away(excuse)
                         sign_off_state["in_progress"] = True
                         sign_off_state["speech_started"] = False
@@ -488,7 +517,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         )
                     else:
                         session.generate_reply(
-                            user_input=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question or one small detail of yours, not both. Let the topic breathe.]"
+                            user_input=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question, placed last. Say nothing about yourself unless they asked. Let the topic breathe.]"
                         )
 
             elif msg_type == "roxstar.set_laugh_mode":
@@ -561,6 +590,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 tracker.record_duet_declined()
                 if tracker.should_sign_off():
                     excuse = tracker.get_random_excuse()
+                    recorder.mark_exit("two_decline_exit")
                     tracker.mark_simran_away(excuse)
                     sign_off_state["in_progress"] = True
                     sign_off_state["speech_started"] = False
@@ -680,6 +710,11 @@ async def entrypoint(ctx: JobContext) -> None:
         greeting_task.cancel()
         await session.aclose()
         await realtime_model.aclose()
+        # Flush the conversation log last, after the voice session is already closed.
+        try:
+            await recorder.close(default_reason="user_disconnected", timeout=8.0)
+        except Exception as exc:
+            logger.warning("Conversation recorder close failed: %s", exc)
 
     ctx.add_shutdown_callback(on_shutdown)
 

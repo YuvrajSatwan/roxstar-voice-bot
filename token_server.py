@@ -37,6 +37,9 @@ from typing import Any
 
 from livekit import api
 from sts_lab.config import StsSettings
+from sts_lab.db.admin_api import AdminDbRunner, handle_admin_request
+
+_admin_runner = AdminDbRunner()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("sts_token_server")
@@ -120,9 +123,30 @@ class StsTokenHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Access-Control-Allow-Origin", origin)
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
         self.end_headers()
         self.wfile.write(payload)
+
+    def _handle_admin(self, method: str) -> None:
+        """Delegate /api/admin/* to the framework-free handler (auth via X-Admin-Key)."""
+        try:
+            body = self._read_json() if method == "POST" else None
+        except Exception:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON body."})
+            return
+        resp = handle_admin_request(method, self.path, body, self.headers.get("X-Admin-Key"), _admin_runner,
+                                    client_ip=self.client_address[0])
+        origin = self.headers.get("Origin", "*")
+        self.send_response(resp.status)
+        self.send_header("Content-Type", resp.content_type)
+        self.send_header("Content-Length", str(len(resp.body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
+        for key, value in resp.headers.items():
+            self.send_header(key, value)
+        self.end_headers()
+        self.wfile.write(resp.body)
 
     def _serve_static_file(self, file_path: Path) -> None:
         if not file_path.is_file():
@@ -143,9 +167,19 @@ class StsTokenHandler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_OPTIONS(self) -> None:  # noqa: N802
-        self._send_json(HTTPStatus.NO_CONTENT, {})
+        origin = self.headers.get("Origin", "*")
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
+        if self.path.startswith("/api/admin"):
+            self._handle_admin("GET")
+            return
         if self.path == "/health":
             self._send_json(
                 HTTPStatus.OK,
@@ -215,6 +249,9 @@ class StsTokenHandler(BaseHTTPRequestHandler):
         return body
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path.startswith("/api/admin"):
+            self._handle_admin("POST")
+            return
         if self.path not in ("/token", "/rooms"):
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found"})
             return

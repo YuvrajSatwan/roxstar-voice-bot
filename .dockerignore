@@ -7,4 +7,6 @@ web/node_modules
 web/dist
 .env
 .sts_users.json
-
+*.db
+*.db-wal
+*.db-shm

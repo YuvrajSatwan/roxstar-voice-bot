@@ -59,3 +59,9 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local databases
+*.db
+*.db-wal
+*.db-shm
+*.sqlite

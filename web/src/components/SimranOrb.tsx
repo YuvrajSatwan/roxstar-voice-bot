@@ -30,7 +30,7 @@ export const SimranOrb: React.FC<SimranOrbProps> = ({ state, audioLevel, isConne
       icon: <Sparkles size={14} color="#ff2e93" />,
     },
     speaking: {
-      label: 'Simran Speaking (Sulafat)',
+      label: 'Simran Speaking (Leda)',
       badgeClass: 'badge--speaking',
       icon: <Volume2 size={14} color="#10b981" />,
     },

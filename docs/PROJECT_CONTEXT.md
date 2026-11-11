@@ -25,8 +25,8 @@ The system powers **Simran**, a 22-year-old female music host and digital compan
 | **Backend HTTP API** | Python `ThreadingHTTPServer` / `BaseHTTPRequestHandler` | Concurrent room provisioning and token minting on port 8001 |
 | **Frontend UI** | React 19, TypeScript, Vite 8 | Two-pane interactive studio stage, audio visualizers, and state badges |
 | **Frontend Media** | `livekit-client` (2.22+) | WebRTC audio track publishing, audio level analysis, and data listener |
-| **Persistence** | Local JSON store (`.sts_users.json`) | Returning user profile memory across sessions |
-| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 21 end-to-end state and onboarding scenario tests |
+| **Persistence** | SQLAlchemy (SQLite / PostgreSQL) in `db/`, plus local JSON (`.sts_users.json`) | Conversation/session recording, admin analytics, and returning user profile memory |
+| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 49 unit, scenario and persistence tests |
 
 ---
 
@@ -106,10 +106,15 @@ flowchart TD
    - `OnboardingTracker`: Manages session discovery state, tooltip deduplication, coin balances (50 welcome coins), action nudge counter, and signoff excuse selection.
 
 5. **[`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py)** — *Persona & System Prompt*:
-   - Defines Simran's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (12–22 words, up to 26 for handoffs), Trade Rule, and strict 2-decline exit rule.
+   - Defines Simran's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (12–22 words, up to 26 for handoffs), About-You Rule (nothing about herself unless asked; question always last), and strict 2-decline exit rule.
    - Contains session tuning directives (`LIVE_SESSION_NOTES`) for Google Gemini 3.8 Live API.
 
-6. **[`config.py`](file:///y:/roxstar/sts_lab/config.py)** — *Configuration*:
+6. **[`db/`](file:///y:/roxstar/sts_lab/db/)** — *Conversation persistence & admin analytics*:
+   - `models.py` / `database.py` / `repository.py`: async SQLAlchemy (SQLite or PostgreSQL) users, sessions and messages.
+   - `recorder.py`: non-blocking `SessionRecorder` used by `worker.py` (queue + single background writer, outage tolerant).
+   - `analytics.py` / `admin_api.py`: KPI, funnel, session, user and export queries behind `/api/admin/*` (key-protected). Dashboard at `/admin` in `web/src/admin/`. Details in [`ADMIN_DASHBOARD.md`](file:///y:/roxstar/sts_lab/docs/ADMIN_DASHBOARD.md).
+
+7. **[`config.py`](file:///y:/roxstar/sts_lab/config.py)** — *Configuration*:
    - Loads environment variables into immutable `StsSettings` dataclass.
 
 ### Frontend Components (`web/src/`)
@@ -148,7 +153,9 @@ y:\roxstar\sts_lab\
 ├── tests/                     # Automated Pytest suite
 │   ├── conftest.py            # Path setup for standalone tests
 │   ├── test_sts_onboarding.py # State machine & profile unit tests
-│   └── test_sts_onboarding_scenarios.py # 12 user journey scenario tests
+│   ├── test_sts_onboarding_scenarios.py # user journey scenario tests
+│   └── test_persistence.py    # DB recorder, analytics and admin API tests
+├── db/                        # Conversation persistence, analytics & admin API
 └── web/                       # React 19 + TypeScript + Vite frontend
     ├── package.json           # Frontend dependencies & scripts
     ├── vite.config.ts         # Vite bundler configuration
@@ -227,7 +234,7 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
 4. **Paced 4–5 Minute Engagement Flow**:
    - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Simran never reveals her own city unless the user shares theirs or asks; she asks the user's city once in Phase 1 and saves it).
    - *Rationale*: Rushing to pitch a duet on turn 5 leads to 90-second drop-offs; letting personal rapport and musical safety build first increases duet conversion rates.
-4. **Clean Bot Power-Off on Handover**:
+5. **Clean Bot Power-Off on Handover**:
    - *Decision*: When the user enters a duet room or solo recording studio, the bot detaches its audio input, publishes state updates, and cleanly shuts down its session.
    - *Rationale*: Ensures the user has 100% microphone ownership on stage without the model listening, interrupting, or consuming unnecessary tokens.
 5. **Silent Function Tool Execution**:
@@ -256,7 +263,7 @@ Stored in `.env` (copy from [`.env.example`](file:///y:/roxstar/sts_lab/.env.exa
 ## 10. Known Limitations & Technical Constraints
 
 - **Single Active Agent Per Room**: The worker runs as a dedicated agent per room. Multi-bot conversations (e.g. Kabir + Simran simultaneously) require the legacy cascade setup or multi-worker routing.
-- **Local JSON Store**: User profiles are saved in `.sts_users.json` on local disk; a production migration would require a distributed database (e.g. PostgreSQL or Redis).
+- **Local JSON Store**: Returning-user profiles are still saved in `.sts_users.json` on local disk; conversation history lives in the `db/` SQL database (SQLite by default, PostgreSQL via `DATABASE_URL`). Unifying the two is a production follow-up.
 - **Static Duet Registry**: Duet rooms are currently populated in-memory in `DuetRoomRegistry` with mock hosts (Aman, Rhea, Kabir); production requires connecting to RoxStar's live backend room service.
 - **Windows Command Convention**: On Windows systems without a virtualenv added to PATH, execute Python commands using `py -m pytest` or `py run_sts.py`.
 

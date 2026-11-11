@@ -18,6 +18,13 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      # Conversation history. Use a permanent PostgreSQL (for example Neon) so it survives
+      # redeploys. Paste the connection string in the Render dashboard; never commit it.
+      - key: DATABASE_URL
+        sync: false
+      # Password for the /admin dashboard. Use a long random value; never commit it.
+      - key: ADMIN_API_KEY
+        sync: false
       - key: STS_MODEL
         value: gemini-3.8-live
       - key: STS_VOICE

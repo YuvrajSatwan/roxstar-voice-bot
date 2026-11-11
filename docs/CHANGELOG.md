@@ -8,7 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-11
 
+### Added
+- **Conversation Persistence Engine, Analytics API and Admin Review Dashboard** (see [`docs/ADMIN_DASHBOARD.md`](file:///y:/roxstar/sts_lab/docs/ADMIN_DASHBOARD.md)):
+  - New `db/` package: async SQLAlchemy models (`users`, `sessions`, `messages`), SQLite for local dev and PostgreSQL via `DATABASE_URL`, an idempotent repository, and a `SessionRecorder` whose methods only enqueue work. One background task writes in order, so the audio event loop never awaits database I/O. If the database is down the agent keeps running; writes retry with backoff in a bounded in-memory queue.
+  - [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) now records final user and Simran turns, per-turn TTFT / tokens per second, captured profile fields, welcome-coin balance, funnel stage and exit reason (`duet_handoff`, `solo_handoff`, `two_decline_exit`, `user_disconnected`, `abandoned`). No prompt, tool or DataPacket was changed.
+  - [`token_server.py`](file:///y:/roxstar/sts_lab/token_server.py) serves `/api/admin/*` (metrics, funnel, sessions, session detail, users, flag, review, CSV/JSON export), protected by `X-Admin-Key` (`ADMIN_API_KEY`; unset disables the API). CSV export neutralises spreadsheet formula injection.
+  - New `/admin` dashboard in `web/src/admin/` (code-split): KPI cards, drop-off funnel, daily trend, conversation replay with latency badges and flagging, user explorer, export, light/dark theme.
+  - New `tests/test_persistence.py` (13 tests: schema and turn logging, metric attachment, rapid turns without loop stalls, DB outage and recovery, queue overflow, exit reasons, stage inference, admin auth, filters, flagging, export). New dependencies: `sqlalchemy[asyncio]`, `aiosqlite`, `asyncpg`. New env vars: `DATABASE_URL`, `STS_DB_ENABLED`, `ADMIN_API_KEY`.
+
+### Changed
+- **Render deployment**: [`render.yaml`](file:///y:/roxstar/sts_lab/render.yaml) now declares `DATABASE_URL` and `ADMIN_API_KEY` as `sync: false` placeholders so Render prompts for them in the dashboard (values are never stored in the repo). Without a permanent `DATABASE_URL`, conversations go to a local SQLite file that Render wipes on every redeploy.
+
 ### Fixed
+- **Housekeeping (voice label, stale docs)**: Frontend voice fallbacks/labels changed from `Sulafat` to `Leda` to match `config.py` (display only; the backend still reports the real voice). Removed two unused prompt-alias imports and a stale persona docstring in `worker.py` (the aliases stay in `prompt.py`). Corrected `TASKS.md` / `PROJECT_CONTEXT.md` (test count, `save_profile` return behaviour, persistence layer, directory tree, duplicate decision numbering).
 - **Missing Bot Response After User Input (Unresponsive Turn Bug)**:
   - **Root Cause Identified from Live Server Logs**: `save_profile` was returning `None` (`-> None`), which LiveKit marked as `reply_required=False`. With `tool_behavior=NON_BLOCKING`, LiveKit sent `tool_response_scheduling=SILENT` ("do not interrupt or trigger generation") to Gemini 3.8 Live API. Whenever the user provided their name, city, or occupation, Gemini executed `save_profile` and suppressed audio generation completely, forcing the user to speak a second time before Simran would reply.
   - **Tool Return & Response Scheduling**: Updated `save_profile` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) to return a confirmation string (`return f"Saved {field}='{value}'. Now respond to the user immediately."`), setting `reply_required=True` so Gemini generates its spoken response without delay.

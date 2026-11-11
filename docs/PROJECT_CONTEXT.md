@@ -90,9 +90,7 @@ flowchart TD
 3. **[`worker.py`](file:///y:/roxstar/sts_lab/worker.py)** — *LiveKit STS Worker*:
    - Connects to LiveKit as agent `sts-simran`.
    - Prewarms SSL context, `anyio`, and `google.genai` packages to eliminate cold-start delay.
-   - Initialises `RealtimeModel` with Gemini 3.8 Live API, configuring audio transcription, non-blocking tools, and temperature (0.7).
-   - Configures `RoomOutputOptions` with WebRTC RFC 2198 Redundant Audio Data (`red=True`), continuous transmission (`dtx=False`), and a 350ms connection-settling buffer to prevent audio jitter at start and in-between turns.
-   - Offloads profile persistence to background threadpool executor (`loop.run_in_executor`) to eliminate event-loop stalls.
+   - Initialises `RealtimeModel` with Gemini 3.8 Live API, configuring audio transcription and temperature (0.7).
    - Exposes 4 LLM function tools:
      - `save_profile(field, value)`: Silently accumulates user info.
      - `check_available_duets(genre)`: Queries available rooms from `DuetRoomRegistry`.

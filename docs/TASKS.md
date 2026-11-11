@@ -1,19 +1,14 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 33/33 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: 34/34 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
 ## 1. Completed Tasks (Verified)
 
 ### Core Architecture & Media Pipeline
-- [x] **Audio Jitter & Glitch Elimination (Start & Mid-Turn)**: Eliminated audio stuttering at call initiation and during turns by:
-  - Adding WebRTC Redundant Audio Data (`red=True`, RFC 2198) and continuous transmission (`dtx=False`) in `RoomOutputOptions`.
-  - Increasing initial WebRTC ICE/DTLS connection settling delay in `send_greeting()` to 350ms.
-  - Making profile JSON disk persistence non-blocking via `loop.run_in_executor` in `UserProfileStore`, eliminating 50-100ms event loop stalls on tool execution.
-  - Setting `min_consecutive_speech_delay=0.0` and `resume_false_interruption=False` to prevent choppy sentence delivery.
-  - Ensuring client-side `<audio>` element is attached to DOM to prevent browser background throttling.
+- [x] **100% Real-Person Identity & Zero AI Admission**: Enforced non-negotiable rule in `prompt.py` and documentation (`WORKFLOW.md`). Simran acts 100% like a real 22-year-old freelance graphic designer from Delhi with her own life. She never admits to being an AI, bot, virtual host, or software under any circumstance or persistent questioning, playfully laughing it off and steering back to music.
 - [x] **Comprehensive Discovery Profile & Sensible First-Interaction Intro**: Expanded `UserDiscoveryProfile` and `save_profile` with `referral_source`, `musical_role`, `singing_comfort`, and `favorite_song` fields alongside `name`, `location`, `occupation`, `hobbies`, `music_taste`, `expectations`, `duet_attempted`, and `coins_explained`. Replaced Phase 3 "saw other rooms" question with authentic Roxstar community introduction.
 - [x] **Strict Turn-Taking & Non-Blocking Silent Tools**: Configured `RealtimeModel` with `tool_behavior=genai_types.Behavior.NON_BLOCKING` and updated `save_profile` to return `None` (`reply_required=False`), enabling automatic `SILENT` tool response scheduling. Eliminated multi-turn runaway speech and prohibited post-tool thinking fillers (`"Hmm... ruko, soch rahi hoon"`).
 - [x] **Direct Speech-to-Speech (S2S) Engine**: Integrated Google Gemini 3.8 Live API (`gemini-3.8-live`) via `livekit-plugins-google.realtime.RealtimeModel` with native bidirectional 24kHz PCM audio streaming.
@@ -26,7 +21,7 @@
 - [x] **Phase 2 Music Opener ("Aap Gaane Sunte Ho Ya Gaate Ho?") & Adaptive Branching**: Replaced generic Phase 2 opener with the core question *"Chalo ab thodi gaano ki baat karte hain — waise aap gaane sirf sunte ho ya khud bhi gaate ho?"*, branching organically for pure listeners (genre/loop song validation + listening habits) versus singers/hummers (bathroom singer check + performance anxiety bond). Removed duplicate questioning in Phase 3.
 - [x] **Natural Laughter & Laughter-Off Mode**: Authored authentic Hindi laughter guidelines in `prompt.py` (spontaneous giggles `"hehe"`, warm breathy chuckles `"haha yaar"`, dramatic teasing laughs `"haha haaye!"`). Added full Turned-Off Laughter mode in `OnboardingTracker` allowing users to suppress laughter for a calm, composed tone.
 - [x] **Simran 22yo Delhi Persona (Delhi-Only Identity)**: Authored system prompt (`prompt.py`) with urban Hinglish vernacular, 3-gear conversational energy, turn limits (12–22 words), Trade Rule, and strict Delhi-only identity (`"Main Simran, Delhi se"`). Prohibits commentary, critiques, or clichés about any city. City probing was restored on 2026-11-10: Simran asks the user's city once in Phase 1 and saves it silently (`save_profile(location)`), and reveals Delhi only after the user shares theirs or asks.
-- [x] **Production Voice Polish (2026-11-10)**: Calmer greeting and handoffs, "aap"-only register, deduplicated prompt rules, honest AI disclosure, cleaned duet data. See `CHANGELOG.md`.
+- [x] **Production Voice Polish (2026-11-10)**: Calmer greeting and handoffs, "aap"-only register, deduplicated prompt rules, no volunteering of AI status (honest one-line answer only to sincere questions), cleaned duet data. See `CHANGELOG.md`.
 - [x] **Curious Follow-Up on Generic Occupation Answers**: Engineered natural conversation deepening when users give generic occupation responses (e.g., "business", "job", "college", "student", "freelance", "startup"). Instead of instantly jumping to hobbies or music, Simran asks exactly one natural, curious follow-up ("Business mein kya karte ho?", "College mein kya padh rahe ho?", "Job kis field mein hai?") before sharing her design work and advancing. Backed by `is_generic_occupation()` detection and dynamic LLM context guidance in `OnboardingTracker`.
 - [x] **2-Attempt Singing Encouragement Flow**: Structured 2-attempt low-pressure encouragement before sign-off (Attempt 1: no perfect singer needed + duet bridge; Attempt 2: post fav song + personal listen/comment promise).
 - [x] **Anti-Chit-Chat Excuse Engine**: Implemented strict 2-decline exit rule using authentic personal excuses (Swiggy, chai, client ping, battery low) to gracefully close sessions under 25 words.

@@ -568,3 +568,21 @@ def test_scenario_22_spoken_lines_are_calm_aap_register_and_clean() -> None:
     assert all("(" not in r.song_title and "ā" not in r.song_title for r in rooms)
 
 
+
+
+def test_scenario_23_ai_status_never_admitted_and_100_percent_human() -> None:
+    """23. Simran never admits to being an AI or bot under any circumstance and maintains 100% human Delhi persona."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    assert "NEVER admit or say you are an AI or bot" in prompt
+    assert "100% a real, living person" in prompt
+    assert "Haha arre main koi robot thodi hoon! Bilkul real hoon, Delhi se." in prompt
+
+    # No scripted spoken line (excuses, handoffs) mentions being an AI
+    spoken_lines = (
+        list(SIMRAN_SIGNOFF_EXCUSES)
+        + list(SIMRAN_DUET_HANDOFF_EXCUSES)
+        + list(SIMRAN_SOLO_HANDOFF_EXCUSES)
+    )
+    import re
+    assert not any(re.search(r"(ai|robot|bot)", line.lower()) for line in spoken_lines)

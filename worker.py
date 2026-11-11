@@ -286,14 +286,14 @@ async def entrypoint(ctx: JobContext) -> None:
         turn_handling={
             "interruption": {
                 "enabled": True,
-                "min_duration": 0.8,
+                "min_duration": 0.7,
                 "resume_false_interruption": False,
             },
             "preemptive_generation": {
                 "enabled": False,
             },
         },
-        min_consecutive_speech_delay=0.0,
+        min_consecutive_speech_delay=0.15,
     )
 
     async def turn_off_bot(reason: str = "onboarding_completed") -> None:
@@ -609,18 +609,13 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception as e:
             logger.warning("Error processing received data: %s", e)
 
-    logger.info("Starting AgentSession in room (sync_transcription=False, RED=True, dtx=False for jitter-free audio)...")
+    logger.info("Starting AgentSession in room (sync_transcription=False for zero audio stutter)...")
     await session.start(
         agent,
         room=ctx.room,
         room_output_options=RoomOutputOptions(
             sync_transcription=False,
             audio_sample_rate=24000,
-            audio_publish_options=rtc.TrackPublishOptions(
-                source=rtc.TrackSource.SOURCE_MICROPHONE,
-                red=True,  # RFC 2198 Redundant Audio Data for packet loss & jitter resilience
-                dtx=False, # Disable discontinuous transmission to prevent cut-off syllables and stuttering
-            ),
         ),
     )
     logger.info("Simran STS AgentSession active in room %s", ctx.room.name)
@@ -632,12 +627,10 @@ async def entrypoint(ctx: JobContext) -> None:
         "discovered": list(tracker.discovered_topics),
     })
 
-    # Trigger opening line natively for a visitor after WebRTC connection stabilizes
+    # Trigger opening line natively for a visitor with minimum latency
     async def send_greeting() -> None:
         nonlocal has_greeted
-        # Allow 350ms buffer for WebRTC ICE negotiation, DTLS handshake, and client track subscription
-        # to settle so the initial greeting is completely smooth with no clipped words or stutter.
-        await asyncio.sleep(0.35)
+        await asyncio.sleep(0.08)  # minimal 80ms buffer for initial WebRTC track link
         if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
             return
         has_greeted = True

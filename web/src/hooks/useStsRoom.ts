@@ -113,12 +113,7 @@ export function useStsRoom() {
       // Detach any attached audio elements to prevent memory leaks and duplicate playback
       roomRef.current.remoteParticipants.forEach((p) => {
         p.audioTrackPublications.forEach((pub) => {
-          const detached = pub.track?.detach() || [];
-          detached.forEach((el) => {
-            if (el.parentNode) {
-              el.parentNode.removeChild(el);
-            }
-          });
+          pub.track?.detach();
         });
       });
       await roomRef.current.disconnect();
@@ -169,18 +164,9 @@ export function useStsRoom() {
           RoomEvent.TrackSubscribed,
           (track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => {
             if (track.kind === Track.Kind.Audio) {
-              const oldElements = track.detach(); // Detach any existing audio elements to prevent duplicate/echo playback
-              oldElements.forEach((e) => {
-                if (e.parentNode) e.parentNode.removeChild(e);
-              });
+              track.detach(); // Detach any existing audio elements to prevent duplicate/echo playback
               const el = track.attach();
               el.autoplay = true;
-              el.preload = 'auto';
-              // Ensure audio element is retained in DOM (hidden) so browsers don't throttle or glitch audio stream
-              if (!document.body.contains(el)) {
-                el.style.display = 'none';
-                document.body.appendChild(el);
-              }
 
               try {
                 // Use LiveKit's official createAudioAnalyser with cloneTrack=true so it NEVER interferes with the WebRTC playback stream
@@ -216,10 +202,7 @@ export function useStsRoom() {
 
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
           if (track.kind === Track.Kind.Audio) {
-            const detached = track.detach();
-            detached.forEach((e) => {
-              if (e.parentNode) e.parentNode.removeChild(e);
-            });
+            track.detach();
             if (analyserCleanupRef.current) {
               void analyserCleanupRef.current().catch(() => {});
               analyserCleanupRef.current = null;

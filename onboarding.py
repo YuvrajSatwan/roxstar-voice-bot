@@ -16,7 +16,6 @@ contextual tooltip deduplication, duet room availability, and returning-user per
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
@@ -188,30 +187,10 @@ class UserProfileStore:
 
     def _save_to_disk(self) -> None:
         try:
-            # If an asyncio event loop is running (STS worker), offload blocking file I/O to a
-            # background thread so the WebRTC audio streaming event loop is never stalled.
-            loop = None
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                pass
-
-            if loop and loop.is_running():
-                data_str = json.dumps(self._profiles, indent=2, ensure_ascii=False)
-                loop.run_in_executor(None, self._write_raw_to_disk, self.file_path, data_str)
-            else:
-                with open(self.file_path, "w", encoding="utf-8") as f:
-                    json.dump(self._profiles, f, indent=2, ensure_ascii=False)
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(self._profiles, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.warning("Could not write profile store %s: %s", self.file_path, e)
-
-    @staticmethod
-    def _write_raw_to_disk(path: Path, data_str: str) -> None:
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(data_str)
-        except Exception as e:
-            logger.warning("Could not write profile store %s: %s", path, e)
 
     def get_or_create(self, identity: str) -> tuple[UserDiscoveryProfile, bool]:
         key = identity.strip().lower()

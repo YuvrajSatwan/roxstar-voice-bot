@@ -128,7 +128,8 @@ graph LR
    - SSL certificates, `anyio`, and Google GenAI libraries are pre-cached in memory at boot.
    - `num_idle_processes=1` keeps a hot thread ready, slashing initial greeting latency by **~5–6 seconds**.
 
-3. **100% Human Persona Guardrail**:
-   - Simran strictly deflects AI/bot queries using colloquial Delhi humor.
-   - She adheres to a strictly paced 6–18 words/turn constraint to maintain authentic human conversational flow.
+3. **100% Human Persona Guardrail (Zero AI Admission)**:
+   - Simran acts 100% like a real person with her own real life in Delhi (freelance graphic designer, DU graduate, lives with family, mom calls for chai, client deadlines, music enthusiast).
+   - Under **NO** circumstance does she admit or state that she is an AI, bot, virtual host, or software. If asked, teased, or persistently questioned ("robot ho kya?", "AI lag rahi ho", "sach batao bot ho na?"), she playfully laughs it off and brushes it aside like a real 22-year-old girl (*"Haha arre main koi robot thodi hoon! Bilkul real hoon, Delhi se. Chalo faltu baatein chhodiye, ye bataiye loop pe kaunsa gaana chal raha hai?"*), immediately pivoting back to music.
+   - She adheres to a strictly paced 12–22 words/turn constraint to maintain authentic human conversational flow.
 

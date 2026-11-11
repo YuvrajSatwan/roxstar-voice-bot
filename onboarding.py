@@ -16,6 +16,7 @@ contextual tooltip deduplication, duet room availability, and returning-user per
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -89,30 +90,31 @@ def is_generic_occupation(occupation: str | None) -> bool:
         return True
     return False
 
-# Simran's authentic real-world excuses when wrapping up (kept punchy, under 20 words)
+# Simran's authentic real-world excuses when wrapping up (calm, quick, strictly under 25 words).
+# Spoken in "aap" register; no digits or dashes since this text is voiced.
 SIMRAN_SIGNOFF_EXCUSES: list[str] = [
-    "Arre door bell baji, lagta hai Swiggy wala aa gaya! Chalti hoon main, bye!",
-    "Mummy chai ke liye chilla rahi hain! Main bhaagi, aap tab tak gaana zaroor try karna, bye!",
-    "Client ka urgent ping aa gaya, design badalna hai! Nikalti hoon, baad mein baat karte hain, bye!",
-    "Laptop 4 percent pe aa gaya aur charger doosre kamre mein hai! Bhaagi main, bye!",
-    "Ritika meri friend ka phone aa raha hai kab se! Mujhe nikalna padega, next time pakka jam karenge, bye!",
-    "Deadline yaad aa gayi achaanak! Chalti hoon, aap gaake dikhana, bye!",
+    "Arre, doorbell baj rahi hai, Swiggy wala aa gaya lagta hai. Chalti hoon, baad mein baat karte hain, bye!",
+    "Mummy chai ke liye aawaz laga rahi hain. Main chalti hoon, aap gaana zaroor try kijiyega, bye!",
+    "Client ka urgent message aa gaya, design badalna padega. Main nikalti hoon, baad mein baat karte hain, bye!",
+    "Laptop chaar percent pe hai aur charger dusre kamre mein. Main bhaagti hoon, aap gaana try kijiyega, bye!",
+    "Ritika ka phone aa raha hai, kab se kar rahi hai. Main nikalti hoon, next time pakka jam karenge, bye!",
+    "Arre, ek deadline yaad aa gayi. Main chalti hoon, aap gaake dikhaiyega, bye!",
 ]
 
-# Enthusiastic natural Hindi handoff lines when user agrees to join a duet (strictly under 25 words)
+# Calm, warm handoff lines when the user agrees to join a duet (strictly under 25 words)
 SIMRAN_DUET_HANDOFF_EXCUSES: list[str] = [
-    "Yeh hui na baat! Room khul raha hai screen pe, main mic chhodti hoon taaki aap dono mast jam karein. Aag laga dena, bye!",
-    "Zabardast choice! Duet stage ready hai, dil khol ke gaao aur rock karna. All the best, bye bye!",
-    "Sahi hai yaar! Room ready ho gaya screen pe, main mic chhodti hoon. Poori aag laga dena, bye!",
-    "Kya baat hai! Duet stage khul gaya, ab aap dono milke dhoom machao. All the best, bye!",
+    "Lo, room khul gaya screen pe. Main mic chhod rahi hoon, aap dono jam kijiye. Maza aayega, bye!",
+    "Duet stage ready hai. Ab aap dono ka time hai, main nikalti hoon. Khul ke gaaiyega, bye!",
+    "Room aapki screen pe aa gaya. Main beech mein nahi aaungi, aap jam kijiye. All the best, bye!",
+    "Ho gaya, stage khul gaya. Mic ab aapka hai, aaram se gaaiyega. Bye, baad mein milte hain!",
 ]
 
-# Enthusiastic natural Hindi handoff lines when user agrees to solo recording (strictly under 25 words)
+# Calm, warm handoff lines when the user agrees to solo recording (strictly under 25 words)
 SIMRAN_SOLO_HANDOFF_EXCUSES: list[str] = [
-    "Zabardast! Studio mic ready hai screen pe, dil khol ke gaana aur rock karna. All the best, bye!",
-    "Mast choice! Recording stage khul gaya screen pe, poori aag laga dena. Dil khol ke gaao, bye bye!",
-    "Yeh hui na baat! Mic live hai studio mein, all the best aur rock karna, bye!",
-    "Sahi hai yaar! Recording screen pe aa gayi hai, khul ke gaana. All the best, bye!",
+    "Studio aapki screen pe khul gaya. Mic ab aapka hai, aaram se gaaiyega. All the best, bye!",
+    "Lo, recording screen aa gayi. Main chalti hoon, aap dil se gaaiyega. Bye!",
+    "Mic live hai aapke liye. Jaise mann kare waise gaaiyega, koi jaldi nahi. Bye, all the best!",
+    "Recording khul gayi screen pe. Ab bas aap aur mic, khul ke gaaiyega. All the best, bye!",
 ]
 
 # Backward-compatibility aliases for existing imports
@@ -186,10 +188,30 @@ class UserProfileStore:
 
     def _save_to_disk(self) -> None:
         try:
-            with open(self.file_path, "w", encoding="utf-8") as f:
-                json.dump(self._profiles, f, indent=2, ensure_ascii=False)
+            # If an asyncio event loop is running (STS worker), offload blocking file I/O to a
+            # background thread so the WebRTC audio streaming event loop is never stalled.
+            loop = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+
+            if loop and loop.is_running():
+                data_str = json.dumps(self._profiles, indent=2, ensure_ascii=False)
+                loop.run_in_executor(None, self._write_raw_to_disk, self.file_path, data_str)
+            else:
+                with open(self.file_path, "w", encoding="utf-8") as f:
+                    json.dump(self._profiles, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.warning("Could not write profile store %s: %s", self.file_path, e)
+
+    @staticmethod
+    def _write_raw_to_disk(path: Path, data_str: str) -> None:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(data_str)
+        except Exception as e:
+            logger.warning("Could not write profile store %s: %s", path, e)
 
     def get_or_create(self, identity: str) -> tuple[UserDiscoveryProfile, bool]:
         key = identity.strip().lower()
@@ -234,7 +256,7 @@ class DuetRoomRegistry:
                     title="Kesariya Romantic Jam",
                     genre="Bollywood",
                     host_name="Aman",
-                    song_title="Kesariya (Brahmāstra)",
+                    song_title="Kesariya",
                     singers_count=1,
                 ),
                 "duet-tum-hi-ho": DuetRoom(
@@ -242,7 +264,7 @@ class DuetRoomRegistry:
                     title="Tum Hi Ho Acoustic Lounge",
                     genre="Romantic",
                     host_name="Rhea",
-                    song_title="Tum Hi Ho (Aashiqui 2)",
+                    song_title="Tum Hi Ho",
                     singers_count=1,
                 ),
                 "duet-bollywood-90s": DuetRoom(
@@ -255,10 +277,10 @@ class DuetRoomRegistry:
                 ),
                 "duet-arijit-unplugged": DuetRoom(
                     room_id="duet-arijit-unplugged",
-                    title="Tum Hi Ho Acoustic Lounge",
+                    title="Arijit Unplugged",
                     genre="Romantic",
-                    host_name="Rhea",
-                    song_title="Tum Hi Ho (Aashiqui 2)",
+                    host_name="Kabir",
+                    song_title="Channa Mereya",
                     singers_count=1,
                 ),
                 "duet-retro-classics": DuetRoom(
@@ -499,11 +521,11 @@ class OnboardingTracker:
                 tooltip = {
                     "id": "singing_started",
                     "title": "You're on the mic! 🎙️",
-                    "message": "Sing your heart out! Simran is listening warmly.",
+                    "message": "Mic is live. Sing whenever you're ready, Simran is listening.",
                     "target": "stage-mic",
                 }
             song = data.get("song") or "a song"
-            hint = f"[EVENT: User started singing {song}. Listen quietly without interrupting, then warmly appreciate their effort.]"
+            hint = f"[EVENT: User started singing {song}. Listen quietly without interrupting, then react like a friend would, to one specific thing you heard.]"
             return tooltip, hint
 
         elif action_clean == "recording_completed":
@@ -514,19 +536,19 @@ class OnboardingTracker:
                 tooltip = {
                     "id": "posting",
                     "title": "Post Your Recording 🚀",
-                    "message": "Want to share this with fellow music lovers? Click 'Post Song' so others can hear you!",
+                    "message": "Want others to hear this? Tap 'Post Song' to share it.",
                     "target": "post-btn",
                 }
             duration_s = data.get("duration_s", 30)
             hint = (
-                f"[EVENT: User finished their {duration_s}s recording. React specifically and genuinely to their singing, "
-                f"then naturally suggest they can post it so others in RoxStar can listen.]"
+                f"[EVENT: User finished their {duration_s}s recording. React to one specific thing in their singing, in a few natural words, "
+                f"then casually mention they can post it so others in RoxStar can listen.]"
             )
             return tooltip, hint
 
         elif action_clean == "posting_opened":
             tooltip = None
-            hint = "[EVENT: User opened the posting interface. Give a brief, encouraging tip about adding a cover title or caption.]"
+            hint = "[EVENT: User opened the posting interface. Give one short, easy tip about adding a cover title or caption.]"
             return tooltip, hint
 
         elif action_clean == "song_published":
@@ -537,12 +559,12 @@ class OnboardingTracker:
                 tooltip = {
                     "id": "commenting",
                     "title": "Community Love & Comments ❤️",
-                    "message": "Your song is live! Check out other recordings and leave supportive comments.",
+                    "message": "Your song is live. Listen to other recordings and leave a comment.",
                     "target": "feed-tab",
                 }
             song_title = data.get("title", "their recording")
             hint = (
-                f"[EVENT: User successfully published '{song_title}'! Congratulate them with genuine excitement. "
+                f"[EVENT: User successfully published '{song_title}'. Congratulate them like a friend would, warm and brief, no big celebration. "
                 f"Mention that they can browse other singers, leave appreciation comments, and make music friends.]"
             )
             return tooltip, hint
@@ -550,7 +572,7 @@ class OnboardingTracker:
         elif action_clean == "comments_visited":
             self.has_visited_comments = True
             tooltip = None
-            hint = "[EVENT: User visited the community feed and comments. Suggest leaving a comment on someone's performance.]"
+            hint = "[EVENT: User visited the community feed and comments. Casually suggest leaving a comment on someone's performance.]"
             return tooltip, hint
 
         elif action_clean == "duet_requested":
@@ -570,11 +592,11 @@ class OnboardingTracker:
                 tooltip = {
                     "id": "gifting",
                     "title": "Earn Coins & Gift Friends 🎁",
-                    "message": "Collect daily login coins to send virtual gifts to your favorite singers!",
+                    "message": "Daily login coins can be sent as virtual gifts to singers you like.",
                     "target": "coins-btn",
                 }
             hint = (
-                "[EVENT: User asked how to earn coins and send gifts. Explain like a friend sharing inside info: "
+                "[EVENT: User asked how to earn coins and send gifts. Explain it simply, like a friend mentioning something useful: "
                 "daily check-ins accumulate coins over time without spending money, which you can use to send gifts to singers who move you.]"
             )
             return tooltip, hint
@@ -681,7 +703,13 @@ class OnboardingTracker:
         remaining = [f for f in ["name", "location", "occupation", "hobbies", "music_taste", "expectations"] if f not in self.discovered_topics]
         if remaining:
             lines.append(f"UNEXPLORED TOPICS (discover next without drifting): {', '.join(remaining)}")
-            lines.append(f"NEXT FOCUS: Ask about {remaining[0]}. Avoid off-topic tangents!")
+            if remaining[0] == "location":
+                lines.append(
+                    "NEXT FOCUS: Ask about location. Their city only, as one casual question "
+                    "('Aap kahan se ho?'), save it, never comment on the city. Avoid off-topic tangents!"
+                )
+            else:
+                lines.append(f"NEXT FOCUS: Ask about {remaining[0]}. Avoid off-topic tangents!")
         elif not self.profile.duet_attempted and not self.duet_declined:
             lines.append("NEXT FOCUS: Profile discovery complete! Call check_available_duets() and guide user to join a duet room now!")
 
@@ -697,12 +725,13 @@ class OnboardingTracker:
         else:
             lines.append(
                 "LAUGHTER SETTING: Natural laughter is ON. "
-                "Chuckle ('haha yaar') and giggle ('hehe') spontaneously when amused or teasing (~25% of playful turns)."
+                "Laugh only when something is genuinely funny, roughly one turn in six, as a short real laugh inside the sentence, "
+                "never as spelled-out 'haha' or 'hehe' words."
             )
 
         if self.action_nudge_count == 1 and not self.should_sign_off():
             lines.append(
-                "ENCOURAGEMENT ATTEMPT 2: User hesitated or deflected Attempt 1. Warmly encourage them that whenever they feel like it, they can record and post their favorite song, and promise you will wait for it, listen to it, and comment on it!"
+                "ENCOURAGEMENT ATTEMPT 2: User hesitated or deflected Attempt 1. Gently tell them that whenever they feel like it, they can record and post their favorite song, and promise you will wait for it, listen to it, and comment on it. Soft aap forms only ('post kar dijiyega'), no pressure."
             )
 
         if self.should_sign_off():
@@ -710,8 +739,8 @@ class OnboardingTracker:
                 f"SIGN-OFF STATUS (CRITICAL): User has declined/deflected {self.action_nudge_count} times! "
                 "YOUR VERY NEXT TURN MUST BE YOUR EXIT EXCUSE. Keep it strictly under 25 words! "
                 "DO NOT ASK ANY QUESTION! DO NOT CONTINUE SMALL TALK! "
-                "React in one short sentence to their last topic, use a realistic personal excuse "
-                f"(e.g. '{self.get_random_excuse()}'), say goodbye, and exit!"
+                "React in one short sentence to their last topic, use a realistic personal excuse in your own words "
+                f"(for example: '{self.get_random_excuse()}'), say goodbye, and exit!"
             )
 
         return "\n".join(lines)

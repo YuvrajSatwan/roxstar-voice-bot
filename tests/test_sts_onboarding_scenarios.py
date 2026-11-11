@@ -28,6 +28,7 @@ from __future__ import annotations
 from pathlib import Path
 from sts_lab.onboarding import (
     SIMRAN_DUET_HANDOFF_EXCUSES,
+    SIMRAN_SOLO_HANDOFF_EXCUSES,
     SIMRAN_SIGNOFF_EXCUSES,
     SAARA_DUET_HANDOFF_EXCUSES,
     SAARA_SIGNOFF_EXCUSES,
@@ -333,7 +334,8 @@ def test_scenario_14_user_says_yes_after_convincing() -> None:
     duet_handoff = tracker.get_random_duet_handoff_reason()
     assert duet_handoff in SIMRAN_DUET_HANDOFF_EXCUSES
     assert duet_handoff in SAARA_DUET_HANDOFF_EXCUSES
-    assert any(w in duet_handoff for w in ["Yeh hui na baat", "Zabardast", "Sahi hai", "Kya baat"])
+    assert len(duet_handoff.split()) < 25
+    assert "bye" in duet_handoff.lower()
 
     # Bot marks turned off for duet
     tracker.mark_bot_turned_off("User entered live duet stage")
@@ -403,7 +405,7 @@ def test_scenario_17_phase_2_sunte_ho_ya_gaate_ho_adaptive_branching() -> None:
     assert "Toh yahan sirf sunne aaye ho ya khud bhi gaoge?" not in prompt
     assert "Roxstar pe live stages dekhe abhi tak ya seedha is room mein connect hue?" not in prompt
     assert "Aap yahan bas chill karke gaane sunne aaye ho ya khud bhi try karne?" in prompt
-    assert "50 welcome coins unlock karwaye hain" in prompt
+    assert "50 welcome coins aa gaye hain" in prompt
 
     # 4. Functional tracker flow for a listener:
     profile = UserDiscoveryProfile(user_id="user_listener_only", name="Rohan")
@@ -428,7 +430,7 @@ def test_scenario_18_no_formal_ji_with_names() -> None:
 
     # 2. Verify name response template does not include '[Name] ji'
     assert "[Name] ji!" not in prompt
-    assert "[Name]! Main Simran. Waise aap kya karte ho" in prompt
+    assert "[Name]! Main Simran. Aap kahan se ho?" in prompt
 
     # 3. Verify opener angles and reaction list do not use 'Haan ji' or 'Hello ji'
     assert "Haan ji! Aapka naam" not in prompt
@@ -508,7 +510,61 @@ def test_scenario_20_comprehensive_input_fields_capture_and_first_interaction_se
     assert "Name: Aman" in tracker_lean.get_summary_context()
 
 
+def test_scenario_21_city_is_asked_and_saved_without_commenting() -> None:
+    """21. Simran asks the user's city in Phase 1, saves it silently, and never comments on any city."""
+    prompt = SIMRAN_ONBOARDING_SYSTEM_PROMPT
+
+    # 1. City is part of Phase 1 and gets saved; neutral acknowledgement only
+    assert "CITY (ALWAYS ASK, ALWAYS SAVE)" in prompt
+    assert "save_profile with field='location'" in prompt
+    assert "Aap kahan se ho?" in prompt
+    assert "never comment on, praise, judge or stereotype any city" in prompt
+    assert "DO NOT ask the user for their city" not in prompt
+    # Delhi is only revealed after the user shares or asks
+    assert "mention Delhi only AFTER" in prompt
+
+    # 2. A new user with a name but no city is steered to ask the city next
+    tracker = OnboardingTracker(profile=UserDiscoveryProfile(user_id="user_city_flow"))
+    tracker.save_field("name", "Neha")
+    summary = tracker.get_summary_context()
+    assert "NEXT FOCUS: Ask about location" in summary
+    assert "never comment on the city" in summary
+
+    # 3. Silent capture works and clears the city focus
+    assert tracker.save_field("location", "Pune")
+    assert tracker.profile.location == "Pune"
+    assert "location" in tracker.discovered_topics
+    summary2 = tracker.get_summary_context()
+    assert "Location: Pune" in summary2
+    assert "NEXT FOCUS: Ask about location" not in summary2
 
 
+def test_scenario_22_spoken_lines_are_calm_aap_register_and_clean() -> None:
+    """22. Scripted spoken lines stay short, on 'aap', and free of digits, dashes and overacted fillers."""
+    spoken_lines = (
+        list(SIMRAN_SIGNOFF_EXCUSES)
+        + list(SIMRAN_DUET_HANDOFF_EXCUSES)
+        + list(SIMRAN_SOLO_HANDOFF_EXCUSES)
+    )
+    banned_fillers = ["haaye", "oho", "offo", "zabardast", "aag laga"]
+    tum_forms = [" tum ", " tumne", " tumhara", " tera ", "kar dena", "gaao ", "kar lo"]
+    for line in spoken_lines:
+        lowered = f" {line.lower()} "
+        assert len(line.split()) < 25, line
+        assert not any(ch.isdigit() for ch in line), line
+        assert "—" not in line and " - " not in line, line
+        assert not any(f in lowered for f in banned_fillers), line
+        assert not any(t in lowered for t in tum_forms), line
+
+    # Prompt itself must not tell the model to be loud or use 'haha' tokens
+    assert "VERY HIGH ENERGY" not in SIMRAN_ONBOARDING_SYSTEM_PROMPT
+    laugh_on = OnboardingTracker(profile=UserDiscoveryProfile(user_id="calm_user")).get_summary_context()
+    assert "never as spelled-out 'haha' or 'hehe' words" in laugh_on
+
+    # Duet data is clean: no duplicate rooms, no brackets or diacritics read aloud
+    rooms = DuetRoomRegistry().list_available()
+    pairs = [(r.host_name, r.song_title) for r in rooms]
+    assert len(pairs) == len(set(pairs))
+    assert all("(" not in r.song_title and "ā" not in r.song_title for r in rooms)
 
 

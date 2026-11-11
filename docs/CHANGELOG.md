@@ -6,7 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-11-11
+
+### Fixed
+- **Audio Jitter & Glitch Elimination (Start-of-Call & Mid-Turn Speech)**:
+  - **Start-of-Call Handshake Race Condition**: Increased the connection settling buffer in `worker.py`'s `send_greeting()` from 80ms to 350ms (`0.35s`). This allows WebRTC ICE candidate gathering, DTLS encryption handshake, and the browser's audio element playback initialization to complete before Gemini Live generates the first audio packet, eliminating the initial word stutter ("H-h-hey").
+  - **Non-Blocking Background Profile I/O**: Refactored `UserProfileStore._save_to_disk()` in [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py) to detect running asyncio loops and offload synchronous file I/O to Python's background thread pool executor via `loop.run_in_executor`. Eliminated periodic 50–100ms event loop stalls that previously caused WebRTC jitter buffer underruns, clicks, and dropped audio frames during `save_profile` tool execution.
+  - **WebRTC Redundant Audio (RED) & Continuous Transmission**: Configured `RoomOutputOptions` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) with `rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE, red=True, dtx=False)`. RFC 2198 Redundant Audio Data protects audio streams against intermittent packet loss and jitter on consumer WiFi/mobile connections, while disabling DTX ensures uninterrupted continuous 24kHz PCM audio frames.
+  - **Turn Handling & Interruption Calibration**: Set `min_consecutive_speech_delay=0.0` (removing artificial 150ms speech chunk pauses) and tuned `min_duration=0.8` with `resume_false_interruption=False` in [`worker.py`](file:///y:/roxstar/sts_lab/worker.py), preventing ambient room noise or keyboard clicks from causing false pauses and mid-turn audio cut-offs.
+  - **Browser Audio Element Lifecycle**: Updated [`web/src/hooks/useStsRoom.ts`](file:///y:/roxstar/sts_lab/web/src/hooks/useStsRoom.ts) to retain active audio elements in the DOM (`display: none`) and set `preload="auto"` to prevent modern browsers (e.g. Chrome) from background-throttling audio rendering.
+
 ## [Unreleased] - 2026-11-10
+
+### Changed
+- **Production Voice Polish (human, not AI, not overacted)** — wording and tone only, no change to the funnel, tools, state machine or 2-decline exit:
+  - **City is asked and saved again** (Phase 1: Name -> City -> Job -> Hobbies, matching `WORKFLOW.md`). Simran asks "Aap kahan se ho?" once after the name, saves it via `save_profile(location)`, acknowledges neutrally, and never comments on any city. Delhi is revealed only after the user shares their city or asks. A single refusal no longer skips the remaining Phase 1 topics; two refusals go to Phase 2.
+  - **Removed forced high energy**: [`worker.py`](file:///y:/roxstar/sts_lab/worker.py) no longer tells the model to speak with "VERY HIGH ENERGY" or to recite a scripted greeting. Opening is bright but easy (Gear 2). Gear 3 is kept for real peaks only.
+  - **Fixed "tum" slips** in return/rejoin hints (`tumne`, `Oye!`, "super cheerful"); everything stays on "aap" with soft forms (`kijiyega`, `dijiyega`).
+  - **Handoff and sign-off lines** in [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py) rewritten calmer and varied (no "Zabardast / aag laga dena" chorus, no digits, no dashes, fixed the broken Ritika line). Tool results now tell the model to say them in its own words instead of reading them verbatim.
+  - **Prompt cleanup** in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py): duplicated rules (`ji`, `aap`, disclosure, city) merged into one place each, fewer all-caps shouts, em dashes removed from spoken example lines, canned per-genre praise turned into short seeds, opener angles made gender-neutral, pitchy Phase 3 copy ("24/7", "bina judgment", "insider tip") replaced with plain lines.
+  - **Laughter**: instruction changed from spelled-out "haha yaar / hehe" on ~25% of turns to a rare, real laugh (~1 in 6 turns).
+  - **AI disclosure**: Simran now answers "are you an AI?" honestly on the first ask, lightly, instead of deflecting.
+  - **Welcome coins**: the facts section now states the 50 one-time welcome coins as the only allowed amount (it previously contradicted the 50-coin line in Phase 3).
+  - **Duet data**: removed the duplicate `Tum Hi Ho` room (now `Arijit Unplugged` / Kabir / `Channa Mereya`), cleaned spoken song titles (no brackets or diacritics), and removed hardcoded example songs from the `check_available_duets` tool result.
+  - **Event hints and tooltip copy** made plain and brief (tooltip titles unchanged).
+  - Added scenario tests 21 (city asked, saved, never commented on) and 22 (spoken lines short, on "aap", free of digits/dashes/overacted fillers, clean duet data). 33/33 pytest tests passing; web build passing.
 
 ### Added
 - **Phase 3 First-Interaction Alignment & Comprehensive Field Capture**:

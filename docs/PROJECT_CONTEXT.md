@@ -90,7 +90,9 @@ flowchart TD
 3. **[`worker.py`](file:///y:/roxstar/sts_lab/worker.py)** — *LiveKit STS Worker*:
    - Connects to LiveKit as agent `sts-simran`.
    - Prewarms SSL context, `anyio`, and `google.genai` packages to eliminate cold-start delay.
-   - Initialises `RealtimeModel` with Gemini 3.8 Live API, configuring audio transcription and temperature (0.7).
+   - Initialises `RealtimeModel` with Gemini 3.8 Live API, configuring audio transcription, non-blocking tools, and temperature (0.7).
+   - Configures `RoomOutputOptions` with WebRTC RFC 2198 Redundant Audio Data (`red=True`), continuous transmission (`dtx=False`), and a 350ms connection-settling buffer to prevent audio jitter at start and in-between turns.
+   - Offloads profile persistence to background threadpool executor (`loop.run_in_executor`) to eliminate event-loop stalls.
    - Exposes 4 LLM function tools:
      - `save_profile(field, value)`: Silently accumulates user info.
      - `check_available_duets(genre)`: Queries available rooms from `DuetRoomRegistry`.
@@ -106,7 +108,7 @@ flowchart TD
    - `OnboardingTracker`: Manages session discovery state, tooltip deduplication, coin balances (50 welcome coins), action nudge counter, and signoff excuse selection.
 
 5. **[`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py)** — *Persona & System Prompt*:
-   - Defines Simran's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (6–14 words), Trade Rule, and strict 2-decline exit rule.
+   - Defines Simran's 22-year-old South Delhi persona, urban Hinglish vernacular, 3 conversational gears (Gear 3 excited, Gear 2 default warm, Gear 1 soft/shy), turn limits (12–22 words, up to 26 for handoffs), Trade Rule, and strict 2-decline exit rule.
    - Contains session tuning directives (`LIVE_SESSION_NOTES`) for Google Gemini 3.8 Live API.
 
 6. **[`config.py`](file:///y:/roxstar/sts_lab/config.py)** — *Configuration*:
@@ -225,7 +227,7 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
    - *Decision*: Track user action invitations (`action_nudge_count`). After two declines or deflections, Simran makes a realistic excuse (e.g., Swiggy/parcel arrived, mummy yelling for chai, urgent client ping) and wraps up under 25 words.
    - *Rationale*: Prevents costly, open-ended chit-chat and avoids awkward bot-like refusals while maintaining a 100% human South Delhi personality.
 4. **Paced 4–5 Minute Engagement Flow**:
-   - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Simran never reveals her city unless directly asked).
+   - *Decision*: Target 4–5 minute interaction time using 12–22 word conversational turns, multi-turn topic unpacking (exploring favourite artists and singing comfort before pitching duets), and strict unprompted location withholding (Simran never reveals her own city unless the user shares theirs or asks; she asks the user's city once in Phase 1 and saves it).
    - *Rationale*: Rushing to pitch a duet on turn 5 leads to 90-second drop-offs; letting personal rapport and musical safety build first increases duet conversion rates.
 4. **Clean Bot Power-Off on Handover**:
    - *Decision*: When the user enters a duet room or solo recording studio, the bot detaches its audio input, publishes state updates, and cleanly shuts down its session.

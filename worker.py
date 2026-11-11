@@ -166,8 +166,8 @@ async def entrypoint(ctx: JobContext) -> None:
             for i, r in enumerate(rooms[:2])
         ]
         return (
-            "Available famous live duet rooms:\n" + "\n".join(formatted) +
-            "\nINSTRUCTION: Ask the user which of these 2 famous songs they want to sing (e.g. Aman singing 'Kesariya' or Rhea singing 'Tum Hi Ho')!"
+            "Available live duet rooms:\n" + "\n".join(formatted) +
+            "\nINSTRUCTION: Casually ask which of these they would like to jam with, in your own words. Use only the exact host names and song titles listed above."
         )
 
     @llm.function_tool(
@@ -205,7 +205,7 @@ async def entrypoint(ctx: JobContext) -> None:
         return (
             f"Duet room '{song_title}' with {host_name} is now open on the user's screen! "
             f"CRITICAL: Keep your final handoff turn strictly under 25 words! "
-            f"Sign off warmly using this exact situation handoff reason/excuse: '{handoff_excuse}'. "
+            f"Sign off calmly and warmly in your own words, in the spirit of this line (do not read it out like a script): '{handoff_excuse}'. "
             f"Wish them good luck, say goodbye, and exit permanently so they can jam freely! "
             f"Your onboarding work is done and the bot will power off right after this turn."
         )
@@ -236,7 +236,7 @@ async def entrypoint(ctx: JobContext) -> None:
         return (
             f"Recording studio for '{song_title}' is now open on the user's screen with mic live! "
             f"CRITICAL: Keep your final handoff turn strictly under 25 words! "
-            f"Sign off warmly using this exact situation handoff reason/excuse: '{handoff_excuse}'. "
+            f"Sign off calmly and warmly in your own words, in the spirit of this line (do not read it out like a script): '{handoff_excuse}'. "
             f"Wish them good luck on the mic, say goodbye, and exit permanently so they can record freely! "
             f"Your onboarding work is done and the bot will power off right after this turn."
         )
@@ -286,14 +286,14 @@ async def entrypoint(ctx: JobContext) -> None:
         turn_handling={
             "interruption": {
                 "enabled": True,
-                "min_duration": 0.7,
+                "min_duration": 0.8,
                 "resume_false_interruption": False,
             },
             "preemptive_generation": {
                 "enabled": False,
             },
         },
-        min_consecutive_speech_delay=0.15,
+        min_consecutive_speech_delay=0.0,
     )
 
     async def turn_off_bot(reason: str = "onboarding_completed") -> None:
@@ -456,8 +456,8 @@ async def entrypoint(ctx: JobContext) -> None:
                             })
                             session.generate_reply(
                                 user_input=(
-                                    f"{text}\n[EVENT: You were away for chai/client work and user called you back! "
-                                    f"Return enthusiastically: 'Haan haan main aa gayi! Chai pee ke ready! Kaisa raha duet?' Keep strictly under 18 words!]"
+                                    f"{text}\n[EVENT: You were away for chai/client work and user called you back. "
+                                    f"Return warmly and easily, in your own words, like 'Haan, main aa gayi. Kaisa raha duet?' Keep strictly under 18 words, stay on 'aap'.]"
                                 )
                             )
                         else:
@@ -487,7 +487,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         )
                     else:
                         session.generate_reply(
-                            user_input=f"{text}\n[SYSTEM: Natural, warm, and friendly! Speak with an unhurried, smiling tone. Keep reply in natural conversational sweet spot (12-22 words): 1 genuine reaction + 1 relatable detail or question. Let the topic breathe!]"
+                            user_input=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question or one small detail of yours, not both. Let the topic breathe.]"
                         )
 
             elif msg_type == "roxstar.set_laugh_mode":
@@ -537,9 +537,9 @@ async def entrypoint(ctx: JobContext) -> None:
                     })
                     session.generate_reply(
                         user_input=(
-                            "[EVENT: User just returned from their duet stage session and recalled you! "
-                            "React with high excitement and friendly South Delhi warmth: 'Oye! Kaisa raha duet?! Mummy ne mast adrak chai di, ab batao kaisa gaaya tumne!' "
-                            "Keep it strictly under 18 words, super cheerful!]"
+                            "[EVENT: User just returned from their duet stage session and recalled you. "
+                            "Greet them warmly and easily, glad they are back, and ask how the duet went, in your own words, like 'Arre, aap aa gaye! Kaisa raha duet?' "
+                            "Keep it strictly under 18 words, stay on 'aap'.]"
                         )
                     )
 
@@ -583,11 +583,11 @@ async def entrypoint(ctx: JobContext) -> None:
                 else:
                     session.generate_reply(
                         user_input=(
-                            "The user hesitated or declined the duet suggestion. Deliver Encouragement Attempt 2 warmly in natural Hindi: "
+                            "The user hesitated or declined the duet suggestion. Deliver Encouragement Attempt 2 gently in natural Hindi: "
                             "tell them they can sing and post their favourite song whenever they feel like it, and promise "
                             "you will wait for their song, listen to it, and comment on it "
-                            "(e.g. 'Arre koi baat nahi! Jab bhi mann kare na, bas apna favourite gaana gaa kar post kar dena. Main pakka sunungi aur comment bhi karungi!'). "
-                            "Keep it under 22 words, warm, natural, and encouraging."
+                            "(for example: 'Koi baat nahi! Jab bhi mann kare, apna favourite gaana gaa ke post kar dijiyega. Main pakka sunungi aur comment bhi karungi!'). "
+                            "Say it in your own words, stay on 'aap', under 22 words, no pressure."
                         )
                     )
                 publish_data({
@@ -609,13 +609,18 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception as e:
             logger.warning("Error processing received data: %s", e)
 
-    logger.info("Starting AgentSession in room (sync_transcription=False for zero audio stutter)...")
+    logger.info("Starting AgentSession in room (sync_transcription=False, RED=True, dtx=False for jitter-free audio)...")
     await session.start(
         agent,
         room=ctx.room,
         room_output_options=RoomOutputOptions(
             sync_transcription=False,
             audio_sample_rate=24000,
+            audio_publish_options=rtc.TrackPublishOptions(
+                source=rtc.TrackSource.SOURCE_MICROPHONE,
+                red=True,  # RFC 2198 Redundant Audio Data for packet loss & jitter resilience
+                dtx=False, # Disable discontinuous transmission to prevent cut-off syllables and stuttering
+            ),
         ),
     )
     logger.info("Simran STS AgentSession active in room %s", ctx.room.name)
@@ -627,10 +632,12 @@ async def entrypoint(ctx: JobContext) -> None:
         "discovered": list(tracker.discovered_topics),
     })
 
-    # Trigger opening line natively for a visitor with minimum latency
+    # Trigger opening line natively for a visitor after WebRTC connection stabilizes
     async def send_greeting() -> None:
         nonlocal has_greeted
-        await asyncio.sleep(0.08)  # minimal 80ms buffer for initial WebRTC track link
+        # Allow 350ms buffer for WebRTC ICE negotiation, DTLS handshake, and client track subscription
+        # to settle so the initial greeting is completely smooth with no clipped words or stutter.
+        await asyncio.sleep(0.35)
         if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
             return
         has_greeted = True
@@ -639,8 +646,8 @@ async def entrypoint(ctx: JobContext) -> None:
                 logger.info("Triggering personalized warm welcome for returning user: %s", tracker.profile.name)
                 session.generate_reply(
                     user_input=(
-                        f"User '{tracker.profile.name}' is a returning friend! Speak with VERY HIGH ENERGY, big enthusiasm, and excitement! "
-                        f"Greet them warmly by name: 'Arre {tracker.profile.name}! Wapas aa gaye! Aaj kaunsa gaana loop pe chal raha hai?' "
+                        f"User '{tracker.profile.name}' is a returning friend. Greet them warmly by first name, glad they are back, bright but easy (not over the top), "
+                        "and ask one light thing, like which song has been on loop lately, in your own words. Do not recite a script and do not re-introduce yourself. "
                         "(IMPORTANT: pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
                     )
                 )
@@ -648,9 +655,8 @@ async def entrypoint(ctx: JobContext) -> None:
                 logger.info("Triggering signature opening line for new visitor (asking user name first)")
                 session.generate_reply(
                     user_input=(
-                        "Speak with VERY HIGH ENERGY, big enthusiasm, and a joyful, beaming, excited voice! "
-                        "Ask the user's name first without telling your own name yet: "
-                        "'Heyy! Ek aur secret singer room mein aa gaya! Naam kya hai aapka?' "
+                        "Greet them with a warm, bright, easy tone (a smile in your voice, not a shout). "
+                        "Pick ONE of your opening angles and say it in your own words, then ask the user's name, like 'Hey! Ek aur singer aa gaya lagta hai. Naam kya hai aapka?' "
                         "(CRITICAL: DO NOT say your name 'Simran' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
                     )
                 )

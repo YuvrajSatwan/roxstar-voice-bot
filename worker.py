@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import ssl
 import time
 import sys
@@ -282,6 +283,10 @@ async def entrypoint(ctx: JobContext) -> None:
             output_audio_transcription=transcription_config,
             tool_behavior=genai_types.Behavior.NON_BLOCKING,
             temperature=0.7,
+            context_window_compression=genai_types.ContextWindowCompressionConfig(
+                sliding_window=genai_types.SlidingWindow()
+            ),
+            session_resumption=genai_types.SessionResumptionConfig(),
         )
         logger.info("RealtimeModel initialized with audio transcriptions & NON_BLOCKING tools enabled (api_version=v1beta)")
     except Exception as e:
@@ -432,7 +437,7 @@ async def entrypoint(ctx: JobContext) -> None:
         has_greeted = True
         text = getattr(ev, "transcript", None) or getattr(ev, "text", "")
         if text and text.strip():
-            logger.info("User transcribed: %s (final=%s)", text, ev.is_final)
+            logger.info("User transcribed (%d chars, final=%s)", len(text), ev.is_final)
             if ev.is_final:
                 recorder.record_user_turn(text)
             publish_data({
@@ -478,18 +483,22 @@ async def entrypoint(ctx: JobContext) -> None:
     @ctx.room.on("data_received")
     def on_data_received(dp: rtc.DataPacket) -> None:
         try:
+            # Only a human participant may drive the session; ignore packets from anyone else (e.g. other bots).
+            sender = getattr(dp, "participant", None)
+            if sender is not None and not is_human_participant(sender):
+                return
             raw = dp.data.decode("utf-8")
             data = json.loads(raw)
             msg_type = data.get("type")
 
             if msg_type == "roxstar.chat":
-                text = str(data.get("text", "")).strip()
+                text = str(data.get("text", "")).strip()[:500]
                 if text:
-                    logger.info("Received user chat text: %s", text)
+                    logger.info("Received user chat text (%d chars)", len(text))
                     recorder.record_user_turn(text)
                     if tracker.is_simran_away:
                         lower_text = text.lower()
-                        if "simran" in lower_text or "saara" in lower_text or "saraah" in lower_text or "kahan" in lower_text or "back" in lower_text:
+                        if re.search(r"\b(simran|saara|saraah|kahan|kidhar|back|wapas|aa jao|aa jaao)\b", lower_text):
                             tracker.mark_simran_returned()
                             publish_data({
                                 "type": "roxstar.simran_rejoined",

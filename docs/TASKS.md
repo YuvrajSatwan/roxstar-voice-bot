@@ -1,7 +1,7 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: 49/49 Automated Tests Passing | Frontend Production Build Passing
+> **Verification Status**: see the pytest summary (58 at last run) | Frontend Production Build Passing
 
 ---
 

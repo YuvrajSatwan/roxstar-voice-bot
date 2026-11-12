@@ -10,7 +10,7 @@ import { NaturalLaughDemo } from './components/NaturalLaughDemo';
 import { Coins, MessageSquare, Mic, Music2, Smile, Sparkles, Zap } from 'lucide-react';
 
 export function App() {
-  const [userName, setUserName] = useState('Rahul');
+  const [userName, setUserName] = useState('');
   const [stageMode, setStageMode] = useState<'lounge' | 'duet' | 'solo'>('lounge');
   const [mobileTab, setMobileTab] = useState<'stage' | 'chat'>('stage');
   const [showLaughLab, setShowLaughLab] = useState(false);
@@ -68,7 +68,8 @@ export function App() {
   );
   const latestSimranTranscript = latestSimranTurn?.text;
 
-  const ttfa = telemetry.ttfaMs ?? 385;
+  const ttfa = telemetry.ttfaMs;
+  const ttfaLabel = ttfa === null || ttfa === undefined ? '–' : `${Math.round(ttfa)}ms`;
 
   return (
     <div className={`room-shell ${stageMode !== 'lounge' ? 'room-shell--live-stage' : ''}`}>
@@ -93,7 +94,7 @@ export function App() {
             type="button"
             onClick={() => triggerCoinsPopup(50, 'Daily Free Welcome Bonus Claimed')}
             className="room-nav__coins-btn"
-            title="Your StarMaker Coins Wallet - Tap to claim daily bonus"
+            title="Your Roxstar coins wallet - Tap to claim daily bonus"
           >
             <Coins size={14} className="coin-gold-icon" />
             <span>{coinBalance} Coins</span>
@@ -102,10 +103,10 @@ export function App() {
           {/* Direct Speech-to-Speech Telemetry Pill */}
           <div
             className="telemetry-pill"
-            title={`Direct Gemini 3.8 Live Speech-to-Speech (TTFA: ${ttfa}ms, Voice: Leda)`}
+            title={`Direct speech-to-speech (response start: ${ttfaLabel}, voice: ${session?.voice ?? telemetry.voice ?? 'Leda'})`}
           >
             <Zap size={12} className="telemetry-pill__icon" />
-            <span>{ttfa}ms</span>
+            <span>{ttfaLabel}</span>
             <span className="telemetry-pill__sub">S2S</span>
           </div>
 

@@ -67,11 +67,20 @@ class User(Base):
 
     sessions: Mapped[list["ConversationSession"]] = relationship(back_populates="user")
 
+    @property
+    def display_name(self) -> str:
+        """Real name if known, otherwise "Guest" plus a short visitor tag so people stay distinguishable."""
+        if self.name:
+            return self.name
+        tag = self.identity.split("~", 1)[1][:4] if "~" in self.identity else ""
+        return f"Guest {tag}".strip()
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "user_id": self.id,
             "identity": self.identity,
             "name": self.name,
+            "display_name": self.display_name,
             "location": self.location,
             "occupation": self.occupation,
             "hobbies": list(self.hobbies or []),

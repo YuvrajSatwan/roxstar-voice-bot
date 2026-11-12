@@ -6,6 +6,7 @@ It is safe to run more than once. It only touches derived values:
   * removes impossible latency numbers (negative, or a few milliseconds) and bogus tokens/sec,
   * recomputes each session's turn count, average latency and funnel phase,
   * relabels sessions that ended with one of Simran's exit excuses as ``two_decline_exit``,
+  * clears user names that were only the typed placeholder (shows as Guest until a real name is captured),
   * adds the automatic review flags (repeated turn, "ye bataiye" lead-in) to old turns.
 Transcripts and profile data are never changed.
 """
@@ -21,13 +22,13 @@ from sqlalchemy import select, update
 
 from . import conversation_rules as rules
 from .database import acquire_database, release_database
-from .models import ConversationSession, Message
+from .models import ConversationSession, Message, User
 
 logger = logging.getLogger("sts_db.maintenance")
 
 
 async def repair(db) -> dict[str, int]:
-    stats = {"metrics_cleared": 0, "sessions_updated": 0, "flags_added": 0, "exit_relabelled": 0}
+    stats = {"metrics_cleared": 0, "sessions_updated": 0, "flags_added": 0, "exit_relabelled": 0, "names_reset": 0}
     async with db.session() as s:
         msgs = (await s.execute(select(Message).order_by(Message.session_id, Message.turn_index))).scalars().all()
         by_session: dict[str, list[Message]] = {}
@@ -74,6 +75,25 @@ async def repair(db) -> dict[str, int]:
                 sess.exit_reason = "two_decline_exit"
                 stats["exit_relabelled"] += 1
             stats["sessions_updated"] += 1
+        await s.commit()
+
+        # Old rows copied the typed placeholder name (default "Rahul") into users.name. If the name equals the
+        # typed identity and no conversation ever captured it, clear it so the dashboard shows Guest.
+        users = (await s.execute(select(User))).scalars().all()
+        for u in users:
+            typed = u.identity.split("~", 1)[0]
+            if u.name and u.name.strip().lower() == typed:
+                captured = False
+                rows = (await s.execute(select(Message.profile_fields_captured).join(
+                    ConversationSession, Message.session_id == ConversationSession.id
+                ).where(ConversationSession.user_id == u.id, Message.speaker == "User"))).all()
+                for (fields,) in rows:
+                    if isinstance(fields, dict) and fields.get("name"):
+                        u.name, captured = fields["name"], True
+                        break
+                if not captured:
+                    u.name = None
+                stats["names_reset"] += 1
         await s.commit()
 
         # sessions that never got a single message

@@ -161,7 +161,7 @@ export function SessionReplay({ sessionId, onClose, onDeleted }: { sessionId: st
           <h3>Conversation replay</h3>
           {detail && (
             <p className="muted">
-              {detail.user?.name || detail.user?.identity || 'Unknown user'}
+              {detail.user?.display_name || 'Unknown user'}
               {detail.user?.location ? ` · ${detail.user.location}` : ''} · {detail.session.exit_reason || 'in progress'} · reached Phase{' '}
               {detail.session.final_stage} · {detail.messages.length} turns
               {flaggedCount ? ` · ${flaggedCount} flagged` : ''}
@@ -184,6 +184,14 @@ export function SessionReplay({ sessionId, onClose, onDeleted }: { sessionId: st
               {showProfile && <ProfileGrid user={detail.user} />}
             </div>
           )}
+          <div className="pad pad--tight">
+            <strong>Answers captured: </strong>
+            {detail.extraction.asked.length === 0
+              ? 'Simran asked no profile questions in this call.'
+              : `${detail.extraction.captured.length} of ${detail.extraction.asked.length} (${detail.extraction.rate}%)`}
+            {detail.extraction.missed.length > 0 && <span className="muted"> · missed: {detail.extraction.missed.join(', ')}</span>}
+            {detail.extraction.auto.length > 0 && <span className="muted"> · inferred: {detail.extraction.auto.join(', ')}</span>}
+          </div>
           <p className="muted note">
             User lines are Gemini's automatic transcription of the call audio. It can differ from what was actually said (especially
             Hinglish). Simran hears the audio directly, so her replies can be right even when a user line looks wrong.

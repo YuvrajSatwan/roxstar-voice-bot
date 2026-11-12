@@ -31,8 +31,21 @@ export class AdminError extends Error {
   }
 }
 
+export interface Extraction {
+  asked: string[];
+  captured: string[];
+  missed: string[];
+  tool: string[];
+  auto: string[];
+  rate: number | null;
+}
+
 export interface Metrics {
   window_days: number;
+  answers_asked: number;
+  answers_captured: number;
+  answers_captured_pct: number | null;
+  answers_auto_pct: number | null;
   unique_users: number;
   profile_completeness_pct: number | null;
   total_conversations: number;
@@ -93,6 +106,7 @@ export interface SessionRow {
   user_location?: string | null;
   musical_role?: string | null;
   has_flagged_turns?: boolean;
+  extraction?: Extraction;
 }
 
 export interface Paged<T> {
@@ -120,6 +134,7 @@ export interface MessageRow {
 
 export interface UserRow {
   user_id: string;
+  display_name: string;
   identity: string;
   name: string | null;
   location: string | null;
@@ -147,6 +162,7 @@ export interface UserDetail {
 }
 
 export interface SessionDetail {
+  extraction: Extraction;
   session: SessionRow;
   user: UserRow | null;
   messages: MessageRow[];

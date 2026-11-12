@@ -544,7 +544,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
           STARMAKER LIVE DUET STAGE (FULL IMMERSIVE STAGE EXPERIENCE)
          ================================================================ */}
       {activeLiveDuet && (
-        <div className="starmaker-stage-container" role="region" aria-label="StarMaker Live Duet Stage">
+        <div className="starmaker-stage-container" role="region" aria-label="Live Duet Stage">
           {/* Top Live Stage Banner */}
           <div className="starmaker-stage-header">
             <div className="starmaker-stage-header__left">
@@ -653,7 +653,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
             <div className="starmaker-teleprompter-header">
               <div className="starmaker-teleprompter-title">
                 <Music2 size={13} className="neon-cyan" />
-                <span>Synchronized StarMaker Teleprompter</span>
+                <span>Synchronized Teleprompter</span>
               </div>
               <button
                 type="button"
@@ -831,7 +831,7 @@ export const KaraokeStageBar: React.FC<KaraokeStageBarProps> = ({
           STARMAKER SOLO RECORDING STUDIO STAGE
          ================================================================ */}
       {activeSoloStage && (
-        <div className="starmaker-stage-container" role="region" aria-label="StarMaker Solo Recording Stage">
+        <div className="starmaker-stage-container" role="region" aria-label="Solo Recording Stage">
           {/* Top Live Studio Banner */}
           <div className="starmaker-stage-header">
             <div className="starmaker-stage-header__left">

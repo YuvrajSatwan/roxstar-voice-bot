@@ -441,7 +441,9 @@ class OnboardingTracker:
     def save_field(self, field_name: str, value: str) -> bool:
         """Silent profile capture called by LLM tool or parser. Never confirms aloud."""
         clean_field = field_name.strip().lower()
-        clean_val = value.strip()
+        # Values are later written into the model's instructions, so strip control characters, brackets and
+        # line breaks (which could fake an [EVENT: ...] or SYSTEM line) and cap the length.
+        clean_val = " ".join(str(value).replace("[", "(").replace("]", ")").split())[:120].strip()
         if not clean_val or clean_field not in VALID_PROFILE_FIELDS:
             return False
         # Filter out placeholder values that LLMs sometimes generate

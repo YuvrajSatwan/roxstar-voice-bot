@@ -26,7 +26,7 @@ The system powers **Simran**, a 22-year-old female music host and digital compan
 | **Frontend UI** | React 19, TypeScript, Vite 8 | Two-pane interactive studio stage, audio visualizers, and state badges |
 | **Frontend Media** | `livekit-client` (2.22+) | WebRTC audio track publishing, audio level analysis, and data listener |
 | **Persistence** | SQLAlchemy (SQLite / PostgreSQL) in `db/`, plus local JSON (`.sts_users.json`) | Conversation/session recording, admin analytics, and returning user profile memory |
-| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 49 unit, scenario and persistence tests |
+| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 58 unit, scenario and persistence tests |
 
 ---
 
@@ -80,7 +80,7 @@ flowchart TD
    - Handles graceful termination on `KeyboardInterrupt`.
 
 2. **[`token_server.py`](file:///y:/roxstar/sts_lab/token_server.py)** — *Authentication & Dispatcher*:
-   - Listens on `http://127.0.0.1:8001`.
+   - Listens on `STS_HOST:STS_PORT` (default `0.0.0.0:8001`; `PORT` overrides the port).
    - Endpoints:
      - `GET /health` & `GET /`: Healthcheck returning service state, model, and active voice.
      - `GET /duets`: Lists active duet rooms from the registry.
@@ -100,7 +100,7 @@ flowchart TD
    - Implements `turn_off_bot()`: flushes final audio (1.2s buffer), detaches input audio, closes sessions cleanly, and shuts down the job context.
 
 4. **[`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py)** — *State Machine & Persistence*:
-   - `UserDiscoveryProfile`: Dataclass tracking 8 canonical fields (`name`, `location`, `occupation`, `hobbies`, `music_taste`, `expectations`, `duet_attempted`, `coins_explained`).
+   - `UserDiscoveryProfile`: Dataclass tracking 12 fields (`name`, `location`, `occupation`, `hobbies`, `music_taste`, `favorite_song`, `musical_role`, `singing_comfort`, `referral_source`, `expectations`, `duet_attempted`, `coins_explained`).
    - `UserProfileStore`: Lightweight JSON persistence (`.sts_users.json`) recognizing returning users.
    - `DuetRoomRegistry`: In-memory registry of live duet rooms (`duet-kesariya`, `duet-tum-hi-ho`, `duet-bollywood-90s`, etc.).
    - `OnboardingTracker`: Manages session discovery state, tooltip deduplication, coin balances (50 welcome coins), action nudge counter, and signoff excuse selection.
@@ -216,7 +216,13 @@ Backend and Frontend communicate over LiveKit reliable DataPackets via JSON stri
 | `roxstar.chat` | Web UI | User text fallback turn | `text` |
 | `roxstar.app_event` | Web UI | In-app user interactions | `action` (e.g. `singing_started`, `send_duet_gift`) |
 | `roxstar.duet_decline` | Web UI | User declined duet | *(empty)* |
-| `roxstar.user_identity`| Web UI | Initial user name sync | `name` |
+| `roxstar.user_identity`| Web UI | Initial user name sync (handled by the worker; the current web client does not send it) | `name` |
+| `roxstar.duet_navigation` | Worker | Open a duet room on screen | `room_id`, `host_name`, `song_title`, `genre` |
+| `roxstar.solo_recording_navigation` | Worker | Open the solo studio | `song_title` |
+| `roxstar.coin_balance` | Worker | Balance after a gift | `balance`, `success`, `gift` |
+| `roxstar.simran_rejoined` / `roxstar.saara_rejoined` | Worker | Simran is back on mic (second name kept for compatibility) | `message` |
+| `roxstar.laugh_mode_updated` | Worker | Laugh setting confirmed | `enabled` |
+| `roxstar.set_laugh_mode` | Web UI | Turn natural laughter on or off | `enabled` |
 
 ---
 

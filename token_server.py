@@ -136,8 +136,10 @@ class StsTokenHandler(BaseHTTPRequestHandler):
         except Exception:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON body."})
             return
+        # Behind a reverse proxy the socket peer can look local; a forwarded header means it is not.
+        client_ip = "proxied" if self.headers.get("X-Forwarded-For") else self.client_address[0]
         resp = handle_admin_request(method, self.path, body, self.headers.get("X-Admin-Key"), _admin_runner,
-                                    client_ip=self.client_address[0])
+                                    client_ip=client_ip)
         origin = self.headers.get("Origin", "*")
         self.send_response(resp.status)
         self.send_header("Content-Type", resp.content_type)
@@ -273,11 +275,14 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                 return
 
             # POST /token
-            raw_name = str(body.get("name", "Guest")).strip()
+            raw_name = str(body.get("name", "Guest")).strip()[:64]
             name = raw_name if raw_name else f"Guest-{secrets.token_hex(2)}"
             room = str(body.get("room", "")).strip().lower()
             if not room:
                 room = generate_sts_room_code()
+            elif not _ROOM_CODE.match(room):
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid room code."})
+                return
 
             _with_livekit(
                 self.settings,
@@ -303,7 +308,8 @@ class StsTokenHandler(BaseHTTPRequestHandler):
             )
         except Exception as exc:
             logger.error("Token error: %s", exc, exc_info=True)
-            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            # Details stay in the server log; clients get a generic message.
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Could not start a session. Please try again."})
 
     def log_message(self, format: str, *args: Any) -> None:
         pass

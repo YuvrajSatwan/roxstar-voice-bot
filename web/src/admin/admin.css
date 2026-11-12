@@ -129,3 +129,37 @@
 .btn--ghost { background: transparent; color: var(--a-bad); border: 1px solid var(--a-line); }
 .row--gap { gap: 8px; }
 .drawer + .drawer { z-index: 21; }
+
+/* ---- mobile ---- */
+.admin-shell { overflow-x: hidden; }
+.table td, .table th { white-space: nowrap; }
+@media (max-width: 760px) {
+  .admin-top { gap: 8px; padding: 10px 12px; }
+  .admin-brand { font-size: 14px; }
+  .admin-actions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .tabs { order: 3; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { flex: 1 0 auto; padding: 10px 14px; min-height: 40px; }
+  .admin-actions .btn, .icon-btn { min-height: 40px; }
+  .card { padding: 14px; }
+  .kpis { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi { padding: 12px; }
+  .kpi__value { font-size: 20px; overflow-wrap: anywhere; }
+  .filters { flex-direction: column; align-items: stretch; }
+  .filters > * { width: 100%; }
+  .filters .btn { justify-content: center; min-height: 40px; }
+  .admin-shell input:not([type='checkbox']), .admin-shell select, .admin-shell textarea { font-size: 16px; min-height: 42px; }
+  .pager { gap: 8px; font-size: 12px; }
+  .pager .btn { min-height: 40px; }
+  .grid3 { grid-template-columns: 1fr; }
+  .gate { margin: 32px 16px; max-width: none; }
+  .drawer { width: 100vw; border-left: 0; }
+  .drawer__head, .timeline, .drawer__foot, .pad { padding-left: 14px; padding-right: 14px; }
+  .bubble { max-width: 96%; }
+  .profile__grid { grid-template-columns: 1fr; }
+  .row { flex-wrap: wrap; align-items: stretch; }
+  .row > * { flex: 1 1 100%; }
+  .flag-form input { min-width: 0; width: 100%; }
+}
+@media (max-width: 380px) {
+  .kpis { grid-template-columns: 1fr; }
+}

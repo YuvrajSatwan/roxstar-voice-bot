@@ -97,9 +97,18 @@ function Overview({ days, refreshKey }: { days: number; refreshKey: number }) {
           hint={metrics.ttft_samples ? `${metrics.ttft_samples} turns, user stops to Simran starts` : 'no latency samples yet'}
         />
         <Kpi
+          label="Answers captured"
+          value={metrics.answers_captured_pct === null ? '–' : `${metrics.answers_captured_pct}%`}
+          hint={
+            metrics.answers_asked
+              ? `${metrics.answers_captured} of ${metrics.answers_asked} questions Simran asked${metrics.answers_auto_pct ? `, ${metrics.answers_auto_pct}% inferred` : ''}`
+              : 'no profile questions asked yet'
+          }
+        />
+        <Kpi
           label="Profile completeness"
           value={metrics.profile_completeness_pct === null ? '–' : `${metrics.profile_completeness_pct}%`}
-          hint="avg fields filled per user"
+          hint="core fields filled per user"
         />
       </section>
 
@@ -256,13 +265,14 @@ function Sessions({ onOpen, refreshKey }: { onOpen: (id: string) => void; refres
                   <th>Turns</th>
                   <th>Length</th>
                   <th>Avg response</th>
+                  <th>Captured</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="muted">
+                    <td colSpan={10} className="muted">
                       No sessions match these filters.
                     </td>
                   </tr>
@@ -282,6 +292,9 @@ function Sessions({ onOpen, refreshKey }: { onOpen: (id: string) => void; refres
                     <td>{s.total_turns}</td>
                     <td>{fmtDuration(s.duration_seconds)}</td>
                     <td>{fmtMs(s.avg_ttft_ms)}</td>
+                    <td title={s.extraction?.missed.length ? `Missed: ${s.extraction.missed.join(', ')}` : 'Everything asked was captured'}>
+                      {s.extraction && s.extraction.asked.length ? `${s.extraction.captured.length}/${s.extraction.asked.length}` : '–'}
+                    </td>
                     <td>{s.has_flagged_turns ? '🚩' : ''}</td>
                   </tr>
                 ))}
@@ -380,7 +393,7 @@ function Users({ onOpenUser, refreshKey }: { onOpenUser: (id: string) => void; r
                   {data.items.map((u) => (
                     <tr key={u.user_id} onClick={() => onOpenUser(u.user_id)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpenUser(u.user_id)}>
                       <td>
-                        {u.name || u.identity}
+                        {u.display_name}
                         {u.visitor ? <span className="muted"> · {u.visitor.slice(0, 6)}</span> : null}
                       </td>
                       <td>{u.location || '–'}</td>

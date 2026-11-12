@@ -22,7 +22,7 @@ STS Lab Standalone
 │   ├── WORKFLOW.md        # End-to-end onboarding workflows & sequence diagrams
 │   ├── TASKS.md           # Implementation progress & roadmap tracker
 │   └── CHANGELOG.md       # Chronological record of major changes
-├── tests/                 # 23-scenario Pytest Suite
+├── tests/                 # scenario Pytest Suite
 └── web/                   # 2-Pane Clean React/TypeScript Studio Stage
 ```
 
@@ -92,5 +92,5 @@ Open **`http://127.0.0.1:5175/`** in your browser to interact with Simran on liv
 ```bash
 pytest tests/ -v
 ```
-All 23 user scenarios and state tests will execute and pass.
+All scenario tests and state tests will execute and pass.
 

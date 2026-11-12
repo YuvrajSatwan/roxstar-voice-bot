@@ -30,9 +30,9 @@ export function ProfileGrid({ user }: { user: UserDetail['user'] }) {
   ];
   return (
     <div className="profile">
-      <div className="profile__bar" title={`${user.completeness}% of profile fields filled`}>
+      <div className="profile__bar" title={`${user.completeness}% of the 8 core profile fields filled`}>
         <div className="profile__fill" style={{ width: `${user.completeness}%` }} />
-        <span>{user.completeness}% profile complete</span>
+        <span>{user.completeness}% of core profile filled</span>
       </div>
       <dl className="profile__grid">
         {rows.map(([k, v]) => (
@@ -66,7 +66,7 @@ export function UserDrawer({ userId, onClose, onOpenSession }: { userId: string;
     <aside className="drawer" aria-label="User profile">
       <header className="drawer__head">
         <div>
-          <h3>{detail ? detail.user.name || detail.user.identity : 'User'}</h3>
+          <h3>{detail ? detail.user.display_name : 'User'}</h3>
           {detail && (
             <p className="muted">
               {detail.user.session_count} {detail.user.session_count === 1 ? 'conversation' : 'conversations'} · first seen {fmtDate(detail.user.created_at)}

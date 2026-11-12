@@ -48,7 +48,7 @@ Before beginning any substantial development task:
    - Standard event types include `roxstar.sts.state`, `roxstar.sts.telemetry`, `roxstar.sts.transcript`, `roxstar.user_state`, `roxstar.stage_transferred`, and `roxstar.bot_turned_off`.
 3. **Persona & Guardrails Integrity**:
    - Simran's persona prompt in [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py) requires strict conversational constraints:
-     - Short turns (6–14 words, max 18).
+     - Short turns (12–22 words is the sweet spot; up to 26 for a handoff or story).
      - Handoff / exit excuses strictly under 25 words.
      - Maximum 1 question per turn; only ~50% of turns contain questions.
      - About-You Rule: Simran shares nothing about herself (name, city, work, hobbies, stories) unless the user directly asks. When she answers, the answer comes first and any question she has is the last thing in the turn.
@@ -67,7 +67,7 @@ Before beginning any substantial development task:
 Every backend or state modification **must** be verified before completing the task:
 
 ```bash
-# 1. Run Python unit & scenario test suite (21 scenarios)
+# 1. Run Python unit, scenario and persistence test suite (see the count in the pytest summary)
 py -m pytest tests/ -v
 
 # 2. Verify Frontend build

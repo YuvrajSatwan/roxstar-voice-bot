@@ -17,18 +17,53 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from . import conversation_rules as rules
 from .models import EXIT_REASONS, ConversationSession, Message, User, iso
 
 FLAG_REASONS = ("latency_spike", "hallucination", "persona_break", "missed_turn", "too_long", "interrupted",
                 "repeated_turn", "interview_phrase", "other")
-PROFILE_FIELDS = ("name", "location", "occupation", "hobbies", "music_taste", "favorite_song", "musical_role",
-                  "singing_comfort", "referral_source", "expectations")
+# Core fields every user is asked. favorite_song (listener path) and singing_comfort (singer path) are only
+# asked on one branch of the conversation, so they never count against a user's completeness.
+PROFILE_FIELDS = ("name", "location", "occupation", "hobbies", "referral_source", "musical_role", "music_taste",
+                  "expectations")
 
 
 def completeness(user: User) -> int:
-    """Percent of the ten profile fields that are filled for this user."""
+    """Percent of the eight core profile fields that are filled for this user."""
     filled = sum(1 for f in PROFILE_FIELDS if getattr(user, f))
     return round(100 * filled / len(PROFILE_FIELDS))
+
+
+def extraction(turns: list[tuple[str, str, Any]]) -> dict[str, Any]:
+    """How well answers were captured in one conversation: fields captured out of fields Simran asked about.
+
+    ``turns`` is a list of (speaker, transcript, profile_fields_captured). A field counts as asked when one of
+    Simran's questions was about it, and as captured when any user turn carries it. ``auto`` means it was
+    inferred from the answer rather than saved by the model's save_profile tool.
+    """
+    asked: list[str] = []
+    tool: set[str] = set()
+    auto: set[str] = set()
+    for speaker, text, fields in turns:
+        if speaker == "Simran":
+            topic = rules.detect_question_topic(text or "")
+            if topic and topic not in asked:
+                asked.append(topic)
+        elif isinstance(fields, dict):
+            auto_keys = set(fields.get(rules.AUTO_KEY, []) or [])
+            for k in fields:
+                if k == rules.AUTO_KEY:
+                    continue
+                (auto if k in auto_keys else tool).add(k)
+    captured = [t for t in asked if t in tool or t in auto]
+    return {
+        "asked": asked,
+        "captured": captured,
+        "missed": [t for t in asked if t not in captured],
+        "tool": [t for t in captured if t in tool],
+        "auto": [t for t in captured if t not in tool],
+        "rate": round(100 * len(captured) / len(asked)) if asked else None,
+    }
 HANDOFF_REASONS = ("duet_handoff", "solo_handoff")
 
 
@@ -107,9 +142,26 @@ async def metrics(s: AsyncSession, days: int = 30) -> dict[str, Any]:
         select(ConversationSession.user_id).where(ConversationSession.started_at >= since).distinct())).all() if uid}
     users = (await s.execute(select(User).where(User.id.in_(user_ids)))).scalars().all() if user_ids else []
     avg_complete = round(sum(completeness(u) for u in users) / len(users)) if users else None
+    msg_rows = (await s.execute(
+        select(Message.session_id, Message.speaker, Message.transcript, Message.profile_fields_captured)
+        .join(ConversationSession, Message.session_id == ConversationSession.id)
+        .where(ConversationSession.started_at >= since).order_by(Message.session_id, Message.turn_index))).all()
+    per_session: dict[str, list[tuple[str, str, Any]]] = {}
+    for sid, speaker, text, fields in msg_rows:
+        per_session.setdefault(sid, []).append((speaker, text, fields))
+    asked_total = captured_total = auto_total = 0
+    for turns in per_session.values():
+        ex = extraction(turns)
+        asked_total += len(ex["asked"])
+        captured_total += len(ex["captured"])
+        auto_total += len(ex["auto"])
     return {
         "unique_users": len(user_ids),
         "profile_completeness_pct": avg_complete,
+        "answers_asked": asked_total,
+        "answers_captured": captured_total,
+        "answers_captured_pct": round(100 * captured_total / asked_total) if asked_total else None,
+        "answers_auto_pct": round(100 * auto_total / captured_total) if captured_total else None,
         "window_days": days,
         "total_conversations": total,
         "onboarding_completion_rate": _pct(reached_pitch, total),
@@ -188,10 +240,17 @@ async def list_sessions(s: AsyncSession, *, page: int = 1, page_size: int = 25, 
         flagged_ids = {sid for (sid,) in (await s.execute(
             select(Message.session_id).where(Message.session_id.in_(ids), Message.flagged_issue.is_(True)).distinct()
         )).all()}
+    turns_by_session: dict[str, list[tuple[str, str, Any]]] = {}
+    if ids:
+        for sid, speaker, text, fields in (await s.execute(
+                select(Message.session_id, Message.speaker, Message.transcript, Message.profile_fields_captured)
+                .where(Message.session_id.in_(ids)).order_by(Message.session_id, Message.turn_index))).all():
+            turns_by_session.setdefault(sid, []).append((speaker, text, fields))
     items = []
     for sess, user in rows:
         d = sess.to_dict()
-        d.update(user_name=(user.name or user.identity) if user else None,
+        d["extraction"] = extraction(turns_by_session.get(sess.id, []))
+        d.update(user_name=user.display_name if user else None,
                  user_location=user.location if user else None,
                  musical_role=user.musical_role if user else None,
                  has_flagged_turns=sess.id in flagged_ids)
@@ -208,7 +267,8 @@ async def get_session(s: AsyncSession, session_id: str) -> dict[str, Any] | None
         select(Message).where(Message.session_id == session_id).order_by(Message.turn_index)
     )).scalars().all()
     return {"session": sess.to_dict(), "user": user.to_dict() if user else None,
-            "messages": [m.to_dict() for m in msgs]}
+            "messages": [m.to_dict() for m in msgs],
+            "extraction": extraction([(m.speaker, m.transcript, m.profile_fields_captured) for m in msgs])}
 
 
 async def update_session_review(s: AsyncSession, session_id: str, *, notes: str | None, rating: int | None) -> bool:
@@ -325,7 +385,7 @@ async def export_rows(s: AsyncSession, *, limit: int = 20000, **filters: Any) ->
         out.append({
             "session_id": sess.id, "room_name": sess.room_name, "started_at": iso(sess.started_at),
             "exit_reason": sess.exit_reason, "final_stage": sess.final_stage,
-            "user_name": (user.name or user.identity) if user else None,
+            "user_name": user.display_name if user else None,
             "user_location": user.location if user else None, "musical_role": user.musical_role if user else None,
             "turn_index": m.turn_index, "speaker": m.speaker, "transcript": m.transcript, "timestamp": iso(m.timestamp),
             "ttft_ms": m.ttft_ms, "tokens_per_second": m.tokens_per_second,

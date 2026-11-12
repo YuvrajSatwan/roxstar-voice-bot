@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] - 2026-11-11
 
+### Fixed (audit follow-up, 2026-11-12)
+- **Auto-captured answers** ([`db/conversation_rules.py`](file:///y:/roxstar/sts_lab/db/conversation_rules.py)): refusals ("Naam nahi batana", "kyun batau", "nahi pata") are no longer stored as name/city/occupation/hobby; fillers like "Haan boliye" and "mein hi" are stripped; "Noida ... par Patna se" keeps the current city; "sunta nahi hoon, gaata hoon" is `singer`; Devanagari question/stage/exit markers added; exit lines need a leaving verb, a bye and no question; the "ye bataiye" flag catches more spellings.
+- [`token_server.py`](file:///y:/roxstar/sts_lab/token_server.py): room codes validated, name capped at 64 characters, generic error text to clients, requests with `X-Forwarded-For` are non-local for the admin no-key mode.
+- [`worker.py`](file:///y:/roxstar/sts_lab/worker.py): context-window compression and session resumption enabled; data packets from non-human participants ignored; whole-word match for the "back/kahan" recall; chat and transcript text no longer written to logs. [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py): saved values lose brackets/newlines and are capped at 120 characters before reaching the model instructions.
+- **Web**: no fake 385 ms TTFT (shows a dash until real data), real voice label, "StarMaker" removed from visible text, mobile-responsive `/admin`.
+- **Docker**: `npm ci`, non-root user. **Docs**: word limits, test counts, 12 profile fields, missing packet types, bind address.
+- 63 tests pass (5 new regression tests). `prompt.py` was not changed. Still open: the AI-disclosure question, affective dialog (needs the alpha API), dead returning-user recognition, unbacked coin credit, mock stage data, accessibility, CI.
+
 ### Added
 - **Interview-tone fix + dashboard completion (2026-11-12)**:
   - [`prompt.py`](file:///y:/roxstar/sts_lab/prompt.py): new "NO INTERVIEW TONE" rule. Simran no longer leads questions with "ye bataiye / aur ye bataiye", does not repeat the same connector, ties questions to what the user said, and never asks on three turns in a row. Removed the "bataiye" examples that taught the model the phrase.

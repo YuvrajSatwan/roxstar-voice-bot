@@ -49,7 +49,7 @@ flowchart TD
 | **Token Server** | `sts_lab/token_server.py` | Runs on `:8001`. Handles `/token`, `/rooms`, and `/duets`. Concurrently pre-provisions LiveKit rooms and dispatches the worker. |
 | **STS Worker** | `sts_lab/worker.py` | Connects as `sts-simran`. Prewarms SSL/libraries, initializes Gemini Realtime session, binds tools (`save_profile`, `check_available_duets`, `navigate_to_duet`), and streams audio. |
 | **Onboarding Engine** | `sts_lab/onboarding.py` | State machine tracking discovered user fields, duet rooms, nudge counts, and realistic sign-off excuses. |
-| **Persona Prompt** | `sts_lab/prompt.py` | Defines Simran's 100% human South Delhi identity, conversational boundaries (<= 18 words), zero music snobbery, and pronunciation directives. |
+| **Persona Prompt** | `sts_lab/prompt.py` | Defines Simran's 100% human South Delhi identity, conversational boundaries (12 to 22 words, up to 26 for handoffs), zero music snobbery, and pronunciation directives. |
 | **Frontend UI** | `sts_lab/web/` | React + Vite UI on `:5175`. Provides audio waveform animation, real-time transcripts, state badges, and direct room joining. |
 
 ---

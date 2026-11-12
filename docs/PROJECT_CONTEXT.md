@@ -26,7 +26,7 @@ The system powers **Simran**, a 22-year-old female music host and digital compan
 | **Frontend UI** | React 19, TypeScript, Vite 8 | Two-pane interactive studio stage, audio visualizers, and state badges |
 | **Frontend Media** | `livekit-client` (2.22+) | WebRTC audio track publishing, audio level analysis, and data listener |
 | **Persistence** | SQLAlchemy (SQLite / PostgreSQL) in `db/`, plus local JSON (`.sts_users.json`) | Conversation/session recording, admin analytics, and returning user profile memory |
-| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 58 unit, scenario and persistence tests |
+| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 64 unit, scenario and persistence tests |
 
 ---
 
@@ -262,7 +262,11 @@ Stored in `.env` (copy from [`.env.example`](file:///y:/roxstar/sts_lab/.env.exa
 | `STS_AGENT_NAME` | No | `sts-simran` | Worker registration name in LiveKit dispatch |
 | `STS_MODEL` | No | `gemini-3.8-live` | Target Gemini Live model identifier |
 | `STS_VOICE` | No | `Leda` | Target Gemini voice timbre (options: `Leda`, `Puck`, `Aoede`, etc.) |
-| `STS_PORT` | No | `8001` | Local port for `token_server.py` |
+| `STS_PORT` | No | `8001` | Local port for `token_server.py` (`PORT`, set by hosts such as Render, overrides it) |
+| `STS_HOST` | No | `0.0.0.0` | Bind address of `token_server.py` |
+| `DATABASE_URL` | No | local SQLite `sts_lab.db` | Conversation database; use PostgreSQL (e.g. Neon) in production |
+| `STS_DB_ENABLED` | No | `true` | `false` turns conversation logging off |
+| `ADMIN_API_KEY` | Prod: Yes | empty | Key for `/api/admin/*`. Empty means loopback-only (requests with `X-Forwarded-For` are refused) |
 
 ---
 

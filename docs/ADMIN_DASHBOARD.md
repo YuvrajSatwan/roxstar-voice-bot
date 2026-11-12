@@ -60,8 +60,11 @@ If `ADMIN_API_KEY` is set, all requests need header `X-Admin-Key: <ADMIN_API_KEY
 | `GET /api/admin/sessions?page&page_size&exit_reason&q&role&date_from&date_to&flagged` | Paginated sessions (`q` searches name, identity, room) |
 | `GET /api/admin/sessions/{id}` | Full timeline with per-turn latency, captured fields and flags |
 | `GET /api/admin/users?page&city&role&song&q` | Users plus breakdowns (roles, top cities, top songs) |
-| `POST /api/admin/messages/{id}/flag` | Body `{"reason": "latency_spike\|hallucination\|persona_break\|missed_turn\|too_long\|interrupted\|other", "flagged": true, "note": "..."}` |
+| `POST /api/admin/messages/{id}/flag` | Body `{"reason": "latency_spike\|hallucination\|persona_break\|missed_turn\|too_long\|interrupted\|repeated_turn\|interview_phrase\|other", "flagged": true, "note": "..."}` |
 | `POST /api/admin/sessions/{id}/review` | Body `{"notes": "...", "rating": 1-5}` |
+| `GET /api/admin/users/{id}` | One user with every field, completeness and all their conversations |
+| `POST /api/admin/sessions/{id}/delete` | Permanently delete one conversation and its messages |
+| `GET /api/admin/flag-reasons` | Allowed flag reasons |
 | `POST /api/admin/export` | Body `{"format": "csv\|json", "flagged_only": false, ...session filters}`. CSV cells that start with `= + - @` are prefixed with `'` to block spreadsheet formula injection. |
 
 ## 5. Dashboard
@@ -74,7 +77,7 @@ If `ADMIN_API_KEY` is set, all requests need header `X-Admin-Key: <ADMIN_API_KEY
 ## 6. Tests
 
 ```bash
-py -m pytest tests/ -v            # includes tests/test_persistence.py (13 tests)
+py -m pytest tests/ -v            # includes tests/test_persistence.py (29 tests)
 npm --prefix web run build
 ```
 
@@ -92,9 +95,12 @@ npm --prefix web run build
 0. **User transcripts are approximate.** The text for user turns comes from Gemini's separate input transcription, not from what the model "hears". Simran understands the audio directly, so she can answer correctly even when a stored user line is wrong (typical for Hinglish: wrong words, or Devanagari versus Roman script). `language_codes` hints are not available on the Gemini Developer API (the SDK rejects them), so accuracy cannot be tuned there. For exact text, run a dedicated speech-to-text over saved audio for logging only.
 
 1. **This stores personal data** (voice transcripts, names, cities). Show a consent notice in the app, decide a retention period (for example delete transcripts after 90 days), restrict who has the admin key, and check the DPDP Act position with legal before launch. Set `STS_DB_ENABLED=false` if consent is not in place yet.
-2. **`identity` is the typed name today**, so two people called "Rahul" share one `users` row. Switch to the Roxstar user ID when it exists (`token_server.py` sets the identity).
+2. **`identity` is `typed name~visitor id`** (a random per-browser id kept in localStorage), so two people with the same name are separate users, but one person on two browsers is two users. Switch to the Roxstar user ID when it exists (`token_server.py` sets the identity).
 3. **No session resume.** A reconnect creates a new session row.
 4. **Exit detection from voice.** The 2-decline exit is only labelled `two_decline_exit` when the backend triggers it (chat or decline event). If the model ends the call on its own from voice, the session is labelled `user_disconnected` or `abandoned`.
 5. **Aggregations run in Python** so they work on SQLite and PostgreSQL. This is fine up to tens of thousands of sessions per month; move the rollups to SQL views beyond that.
 6. **The legacy `.sts_users.json` store is unchanged** and still does small synchronous writes from `save_profile`. Remove it once the database is the source of truth for returning users (this also fixes the dead returning-user recognition noted in the project review).
 7. **CORS** on the token server still reflects any origin. The admin routes are protected by the key, but restrict origins before going public.
+8. **Admin without a key is loopback-only.** A request carrying `X-Forwarded-For` is treated as non-local and refused, so a reverse proxy cannot expose it. Still set `ADMIN_API_KEY` in production.
+9. **Auto-captured answers are heuristics.** Refusals ("nahi batana", "kyun batau") are not stored; Roman and common Devanagari markers are recognised; unusual phrasing is simply not captured (blank, never invented). Exit lines must contain a leaving verb, a bye and no question, so keep `SIMRAN_*_EXCUSES` in `onboarding.py` in sync with the markers in `db/conversation_rules.py`.
+10. **Mobile.** The dashboard is responsive at 760px and below (scrolling tab bar, stacked filters, full-screen drawers).

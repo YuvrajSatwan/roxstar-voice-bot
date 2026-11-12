@@ -97,6 +97,22 @@ _REFUSAL = re.compile(
     r"|नहीं\s*बताना|क्यों\s*बताऊं|छोड़ो|रहने\s*दो",
     re.IGNORECASE,
 )
+# A goodbye or "I have to go" is the user leaving, not an answer to the open question.
+_LEAVING_USER = re.compile(
+    r"\b(?:by+e*|bbye|tata|ta ta|alvida|good\s*night|gn|see\s*you|cya|gotta\s*go|have\s*to\s*go|got\s*to\s*go|"
+    r"kaam\s*(?:aa|a|ag?)\s*ga?ya|kaam\s*hai|busy|baad\s*mein|baad\s*me|phir\s*milte|chalta\s*hoon|chalti\s*hoon|"
+    r"chalta\s*hu|chalti\s*hu|jaana\s*hai|jana\s*hai|jaana\s*padega|call\s*aa|phone\s*aa|mummy\s*bula|later)\b"
+    r"|बाय|अलविदा|काम\s*आ\s*गया|बाद\s*में",
+    re.IGNORECASE,
+)
+
+
+def is_not_an_answer(text: str) -> bool:
+    """True for refusals, deflections and goodbyes: things that must never be stored as profile data."""
+    t = _tidy(text or "")
+    return t.lower() in _NO_ANSWER or len(t) < 2 or bool(_REFUSAL.search(t)) or bool(_LEAVING_USER.search(t))
+
+
 _CONTRAST = re.compile(r"\b(?:par|lekin|but|magar)\b", re.IGNORECASE)
 
 
@@ -108,7 +124,7 @@ def _tidy(text: str) -> str:
 def clean_answer(field: str, text: str) -> str | None:
     """Short, storable value for a profile field from the user's reply, or None if it is not an answer."""
     text = _tidy(text)
-    if text.lower() in _NO_ANSWER or len(text) < 2 or _REFUSAL.search(text):
+    if is_not_an_answer(text):
         return None
     if field in _FILLER:
         if field == "location":

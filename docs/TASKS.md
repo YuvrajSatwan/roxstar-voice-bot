@@ -1,13 +1,14 @@
 # TASKS.md — Development Progress Tracker
 
 > **Current Sprint**: STS Lab Stabilization & Conversational Calibration  
-> **Verification Status**: see the pytest summary (58 at last run) | Frontend Production Build Passing
+> **Verification Status**: 64/64 Automated Tests Passing | Frontend Production Build Passing
 
 ---
 
 ## 1. Completed Tasks (Verified)
 
 ### Core Architecture & Media Pipeline
+- [x] **Audit follow-up fixes (2026-11-12)**: answer-capture heuristics, token server and worker hardening, session resumption and context compression, fake TTFT removed, mobile admin UI, docs drift. See `CHANGELOG.md`.
 - [x] **Conversation Persistence, Analytics API & Admin Dashboard (2026-11-11)**: `db/` package, non-blocking recorder wired into `worker.py`, `/api/admin/*` endpoints, `/admin` review UI, 13 new tests. Remaining before production: consent notice and retention policy, Alembic migrations, real Roxstar user ID as identity, restrict CORS. See `docs/ADMIN_DASHBOARD.md` section 7.
 - [x] **100% Real-Person Identity & Zero AI Admission**: Enforced non-negotiable rule in `prompt.py` and documentation (`WORKFLOW.md`). Simran acts 100% like a real 22-year-old freelance graphic designer from Delhi with her own life. She never admits to being an AI, bot, virtual host, or software under any circumstance or persistent questioning, playfully laughing it off and steering back to music.
 - [x] **Comprehensive Discovery Profile & Sensible First-Interaction Intro**: Expanded `UserDiscoveryProfile` and `save_profile` with `referral_source`, `musical_role`, `singing_comfort`, and `favorite_song` fields alongside `name`, `location`, `occupation`, `hobbies`, `music_taste`, `expectations`, `duet_attempted`, and `coins_explained`. Replaced Phase 3 "saw other rooms" question with authentic Roxstar community introduction.
@@ -95,6 +96,8 @@
 ---
 
 ## 4. Known Bugs, Technical Debt & Blockers
+
+- **Open from the 2026-11-12 audit**: AI-disclosure wording in `prompt.py` (product/legal decision); returning-user recognition is dead code (`UserProfileStore.get_or_create` is never called by the worker); `"50 welcome coins"` and "I will comment" are not backed by a real credit or action; `KaraokeStageBar` uses mock rooms, gifts and a random pitch score; modals lack focus handling and there is no reduced-motion support; no mic-denied cleanup or token-server timeout in `useStsRoom.ts`; `list_users` N+1 queries; no migrations, CI or pinned dependencies; synchronous JSON write in `save_profile`; no consent notice or retention policy.
 
 - **Voice Label Mismatch** (resolved 2026-11-11):
   - *Detail*: UI fallback labels were `Sulafat` while `config.py` defaults to `Leda`; all UI defaults are now `Leda`.

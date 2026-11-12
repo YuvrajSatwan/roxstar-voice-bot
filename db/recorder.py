@@ -407,6 +407,8 @@ class SessionRecorder:
         value = (value or "").strip()
         if not field or not value or self._closed:
             return
+        if field in repo.SCALAR_FIELDS | repo.LIST_FIELDS and rules.is_not_an_answer(value):
+            return  # a goodbye or refusal the model saved by mistake
         # Funnel stage inference
         if field in _STAGE2_FIELDS:
             self.set_stage(2)

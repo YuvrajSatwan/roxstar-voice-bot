@@ -391,9 +391,25 @@ async def entrypoint(ctx: JobContext) -> None:
                 "voice": settings.voice,
             })
 
+    # Response latency as the user feels it: user stops speaking -> Simran starts speaking.
+    speech_end: dict[str, float | None] = {"t": None}
+
+    @session.on("user_state_changed")
+    def on_user_state(ev) -> None:  # type: ignore[no-untyped-def]
+        try:
+            if ev.new_state == "speaking":
+                speech_end["t"] = None
+            elif getattr(ev, "old_state", None) == "speaking":
+                speech_end["t"] = time.monotonic()
+        except Exception as exc:  # never let analytics touch the audio path
+            logger.debug("user_state_changed handler error: %s", exc)
+
     @session.on("agent_state_changed")
     def on_state(ev: AgentStateChangedEvent) -> None:
         logger.info("Agent state changed: %s", ev.new_state)
+        if ev.new_state == "speaking" and speech_end["t"] is not None:
+            recorder.record_response_latency((time.monotonic() - speech_end["t"]) * 1000.0)
+            speech_end["t"] = None
         publish_data({
             "type": "roxstar.sts.state",
             "state": ev.new_state,

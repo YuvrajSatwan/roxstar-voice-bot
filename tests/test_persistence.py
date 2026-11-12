@@ -440,3 +440,207 @@ def test_admin_session_detail_flagging_review_and_export(tmp_path: Path) -> None
         assert _call(runner, "POST", "/api/admin/export", {"format": "xml"}).status == 400
     finally:
         runner.close()
+
+
+# ------------------------------------------------------------------ conversation rules
+def test_text_rules_stage_exit_topic_and_cleaning() -> None:
+    from sts_lab.db import conversation_rules as r
+
+    assert r.detect_stage("Achha Pune! Aap kya karte ho?") == 1
+    assert r.detect_stage("waise aap gaane sirf sunte ho ya khud bhi gaate ho?") == 2
+    assert r.detect_stage("Ek baat bataun? aapke account mein 50 welcome coins aa gaye hain.") == 3
+    assert r.detect_stage("Suno, abhi live duet stage pe Aman Kesariya gaa raha hai") == 4
+    assert r.is_exit_line("Ritika ka phone aa raha hai. Main nikalti hoon, bye!")
+    assert not r.is_exit_line("Lo, room khul gaya screen pe. Main mic chhod rahi hoon, bye!")
+
+    assert r.detect_question_topic("Yuvi! Sahi hai. Aap kis shehar se ho waise?") == "location"
+    assert r.detect_question_topic("Achha Pune! Aap kya karte ho, job ya college?") == "occupation"
+    assert r.detect_question_topic("Sahi hai! Aap purely bathroom singer ho ya doston ke saamne bhi?") == "singing_comfort"
+    assert r.detect_question_topic("Webseries mast. Aap Roxstar tak kaise pahunche?") == "referral_source"
+    assert r.detect_question_topic("Ye ek statement hai.") is None
+
+    assert r.clean_answer("location", "mai pune se") == "Pune"
+    assert r.clean_answer("name", "mera naam yuvi hai") == "Yuvi"
+    assert r.clean_answer("musical_role", "dono") == "both"
+    assert r.clean_answer("occupation", "Mhm.") is None
+    assert r.clean_answer("hobbies", "webseries") == "webseries"
+    assert r.INTERVIEW_PHRASE.search("Aur ye bataiye, aap kahan se ho?")
+    assert not r.INTERVIEW_PHRASE.search("Aap kahan se ho?")
+
+
+def _fetch(url: str, sid: str) -> tuple[ConversationSession, User, list[Message]]:
+    async def go():
+        db = await acquire_database(url)
+        try:
+            async with db.session() as s:
+                sess = await s.get(ConversationSession, sid)
+                user = await s.get(User, sess.user_id)
+                msgs = (await s.execute(select(Message).where(Message.session_id == sid)
+                                        .order_by(Message.turn_index))).scalars().all()
+                return sess, user, list(msgs)
+        finally:
+            await release_database(db)
+
+    return asyncio.run(go())
+
+
+def test_fallback_capture_fills_profile_when_model_skips_save_profile(tmp_path: Path) -> None:
+    url = _url(tmp_path)
+
+    async def go() -> str:
+        rec = SessionRecorder(room_name="r", identity="Yuvi~ab12cd", database_url=url)
+        rec.start()
+        rec.record_assistant_turn("Yuvi! Sahi hai. Aap kis shehar se ho waise?")
+        rec.record_user_turn("mai pune se")
+        rec.record_assistant_turn("Achha Pune! Aap kya karte ho, job ya college?")
+        rec.record_user_turn("job")
+        rec.record_assistant_turn("Job kis field mein hai? Role kya hai waise, tech, marketing?")
+        rec.record_user_turn("tech")
+        # the model DID call save_profile for this one, so no auto capture must be added
+        rec.record_assistant_turn("Webseries mast. Aap Roxstar tak kaise pahunche?")
+        rec.record_user_turn("friend")
+        rec.record_profile_field("referral_source", "friend")
+        await rec.close()
+        return rec.session_id
+
+    sid = asyncio.run(go())
+    sess, user, msgs = _fetch(url, sid)
+    assert user.name == "Yuvi"  # the visitor suffix is not shown as a name
+    assert user.location == "Pune"
+    assert user.occupation == "job, tech"
+    assert user.referral_source == "friend"
+    first_user = [m for m in msgs if m.speaker == "User"][0]
+    assert first_user.profile_fields_captured["location"] == "Pune"
+    assert first_user.profile_fields_captured["_auto"] == ["location"]
+    last_user = [m for m in msgs if m.speaker == "User"][-1]
+    assert "_auto" not in last_user.profile_fields_captured  # tool capture, not inferred
+
+
+def test_auto_flags_stage_and_exit_from_transcript(tmp_path: Path) -> None:
+    url = _url(tmp_path)
+
+    async def go() -> str:
+        rec = SessionRecorder(room_name="r", identity="Ana", database_url=url)
+        rec.start()
+        rec.record_assistant_turn("Aur ye bataiye, aap kahan se ho waise?")
+        rec.record_user_turn("delhi")
+        rec.record_assistant_turn("Suno, abhi live duet stage pe Aman Kesariya gaa raha hai, aur Rhea Tum Hi Ho.")
+        rec.record_user_turn("nahi")
+        rec.record_assistant_turn("Suno, abhi live duet stage pe Aman Kesariya gaa raha hai, aur Rhea Tum Hi Ho.")
+        rec.record_assistant_turn("Ritika ka phone aa raha hai, kab se kar rahi hai. Main nikalti hoon, bye!")
+        rec._t0 -= 60
+        await rec.close()
+        return rec.session_id
+
+    sid = asyncio.run(go())
+    sess, _user, msgs = _fetch(url, sid)
+    tags = [m.admin_tag for m in msgs if m.speaker == "Simran"]
+    assert tags == ["interview_phrase", None, "repeated_turn", None]
+    assert all(m.flagged_issue for m in msgs if m.admin_tag)
+    assert sess.final_stage == 4
+    assert sess.exit_reason == "two_decline_exit"  # detected from her exit excuse, no tool call needed
+
+
+def test_welcome_coins_mentioned_by_simran_are_recorded(tmp_path: Path) -> None:
+    url = _url(tmp_path)
+
+    async def go() -> str:
+        rec = SessionRecorder(room_name="r", identity="Ana", database_url=url)
+        rec.start()
+        rec.record_user_turn("hi")
+        rec.record_assistant_turn("Ek baat bataun? aapke account mein pachaas welcome coins aa gaye hain.")
+        await rec.close()
+        return rec.session_id
+
+    sess, user, _ = _fetch(url, asyncio.run(go()))
+    assert user.coin_balance == 50 and sess.final_stage == 3
+
+
+def test_response_latency_replaces_implausible_provider_numbers(tmp_path: Path) -> None:
+    url = _url(tmp_path)
+
+    async def go() -> str:
+        rec = SessionRecorder(room_name="r", identity="Ana", database_url=url)
+        rec.start()
+        rec.record_response_latency(1850.0)  # measured before the turn text arrives
+        rec.record_assistant_turn("first line of the conversation")
+        rec.record_metrics(1.0, 26.0, 4.2)  # a provider value of 1 ms is not real latency
+        rec.record_assistant_turn("second line")
+        rec.record_metrics(-1000.0, 1128.0, 0.02)  # bogus event, ignored entirely
+        rec.record_assistant_turn("third line")
+        rec.record_response_latency(900.0)  # measured right after the turn is logged
+        await rec.close()
+        return rec.session_id
+
+    sid = asyncio.run(go())
+    sess, _u, msgs = _fetch(url, sid)
+    assert [m.ttft_ms for m in msgs] == [1850.0, None, 900.0]
+    assert msgs[0].tokens_per_second == 26.0
+    assert msgs[1].tokens_per_second is None  # the bogus metric event was never attached
+    assert sess.avg_ttft_ms == 1375.0
+
+
+def test_admin_user_detail_delete_users_export_and_new_kpis(tmp_path: Path) -> None:
+    url = _url(tmp_path)
+    ids = _seed(url)
+    runner = _admin(url)
+    try:
+        m = json.loads(_call(runner, "GET", "/api/admin/metrics").body)
+        assert m["unique_users"] == 3 and m["profile_completeness_pct"] is not None
+
+        users = json.loads(_call(runner, "GET", "/api/admin/users").body)
+        aman = next(u for u in users["items"] if u["identity"] == "aman")
+        assert aman["session_count"] == 1 and aman["completeness"] > 0 and aman["last_session_at"]
+        detail = json.loads(_call(runner, "GET", f"/api/admin/users/{aman['user_id']}").body)
+        assert detail["user"]["location"] == "Delhi" and len(detail["sessions"]) == 1
+        assert detail["sessions"][0]["session_id"] == ids["duet"]
+        assert _call(runner, "GET", "/api/admin/users/" + "0" * 32).status == 404
+
+        as_csv = _call(runner, "POST", "/api/admin/export", {"format": "csv", "kind": "users"})
+        rows = list(csv.DictReader(io.StringIO(as_csv.body.decode("utf-8"))))
+        assert len(rows) == 3 and {r["location"] for r in rows if r["location"]} == {"Delhi", "Mumbai"}
+        assert as_csv.headers["Content-Disposition"].endswith('simran_users.csv"')
+
+        assert _call(runner, "POST", f"/api/admin/sessions/{ids['drop']}/delete", {}).status == 200
+        assert _call(runner, "GET", f"/api/admin/sessions/{ids['drop']}").status == 404
+        assert _call(runner, "POST", f"/api/admin/sessions/{ids['drop']}/delete", {}).status == 404
+        assert json.loads(_call(runner, "GET", "/api/admin/metrics").body)["total_conversations"] == 2
+        assert asyncio.run(_count(url, Message)) == 8  # the deleted session's turns are gone too
+    finally:
+        runner.close()
+
+
+def test_maintenance_repairs_old_rows(tmp_path: Path) -> None:
+    from sts_lab.db.maintenance import repair
+
+    url = _url(tmp_path)
+    sid = _run_session(url, exit_reason=None, turns=2)
+
+    async def damage_and_repair() -> dict:
+        db = await acquire_database(url)
+        try:
+            async with db.session() as s:
+                msgs = (await s.execute(select(Message).where(Message.session_id == sid)
+                                        .order_by(Message.turn_index))).scalars().all()
+                msgs[0].ttft_ms = -1000.0
+                msgs[0].tokens_per_second = 1128.0
+                msgs[0].audio_duration_seconds = 0.02
+                msgs[2].transcript = "Aur ye bataiye, kya karte ho aap?"
+                sess = await s.get(ConversationSession, sid)
+                sess.avg_ttft_ms = -400.0
+                sess.total_turns = 99
+                await s.commit()
+            stats = await repair(db)
+            async with db.session() as s:
+                sess = await s.get(ConversationSession, sid)
+                m0 = (await s.execute(select(Message).where(Message.session_id == sid, Message.turn_index == 0))).scalar_one()
+                m2 = (await s.execute(select(Message).where(Message.session_id == sid, Message.turn_index == 2))).scalar_one()
+                assert m0.ttft_ms is None and m0.tokens_per_second is None
+                assert m2.flagged_issue and m2.admin_tag == "interview_phrase"
+                assert sess.total_turns == 4 and sess.avg_ttft_ms == 250.0
+            return stats
+        finally:
+            await release_database(db)
+
+    stats = asyncio.run(damage_and_repair())
+    assert stats["metrics_cleared"] >= 1 and stats["flags_added"] == 1

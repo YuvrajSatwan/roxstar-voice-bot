@@ -154,6 +154,10 @@ def handle_admin_request(
                             song=_first(query, "song"), q=_first(query, "q"))
                 return _json(200, runner.run(lambda db: _with(
                     db, lambda s: analytics.list_users(s, page=page, page_size=size, **args))))
+            m = re.fullmatch(rf"/api/admin/users/{_ID}", path)
+            if m:
+                data = runner.run(lambda db: _with(db, lambda s: analytics.get_user(s, m.group(1))))
+                return _json(200, data) if data else _json(404, {"error": "User not found."})
             if path == "/api/admin/flag-reasons":
                 return _json(200, {"reasons": list(analytics.FLAG_REASONS)})
 
@@ -174,10 +178,24 @@ def handle_admin_request(
                 ok = runner.run(lambda db: _with(db, lambda s: analytics.update_session_review(
                     s, m.group(1), notes=body.get("notes"), rating=int(rating) if rating not in (None, "") else None)))
                 return _json(200, {"ok": True}) if ok else _json(404, {"error": "Session not found."})
+            m = re.fullmatch(rf"/api/admin/sessions/{_ID}/delete", path)
+            if m:
+                ok = runner.run(lambda db: _with(db, lambda s: analytics.delete_session(s, m.group(1))))
+                return _json(200, {"ok": True}) if ok else _json(404, {"error": "Session not found."})
             if path == "/api/admin/export":
                 fmt = str(body.get("format", "json")).lower()
                 if fmt not in ("json", "csv"):
                     return _json(400, {"error": "format must be 'json' or 'csv'."})
+                if str(body.get("kind", "conversations")) == "users":
+                    urows = runner.run(lambda db: _with(db, lambda s: analytics.export_users(s)), timeout=60.0)
+                    if fmt == "csv":
+                        return AdminResponse(
+                            200, analytics.rows_to_csv(urows, analytics.USER_EXPORT_COLUMNS).encode("utf-8"),
+                            "text/csv; charset=utf-8",
+                            {"Content-Disposition": 'attachment; filename="simran_users.csv"'})
+                    return AdminResponse(200, json.dumps({"count": len(urows), "rows": urows}, default=str).encode("utf-8"),
+                                         "application/json",
+                                         {"Content-Disposition": 'attachment; filename="simran_users.json"'})
                 filters = _filters(body)
                 flagged_only = bool(body.get("flagged_only", False))
                 rows = runner.run(lambda db: _with(db, lambda s: analytics.export_rows(

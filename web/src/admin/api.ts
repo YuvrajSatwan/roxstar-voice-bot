@@ -33,6 +33,8 @@ export class AdminError extends Error {
 
 export interface Metrics {
   window_days: number;
+  unique_users: number;
+  profile_completeness_pct: number | null;
   total_conversations: number;
   onboarding_completion_rate: number;
   duet_conversion_rate: number;
@@ -128,9 +130,20 @@ export interface UserRow {
   musical_role: string | null;
   singing_comfort: string | null;
   referral_source: string | null;
+  expectations: string | null;
   coin_balance: number;
   is_onboarded: boolean;
+  created_at: string | null;
   updated_at: string | null;
+  session_count: number;
+  last_session_at: string | null;
+  completeness: number;
+  visitor: string | null;
+}
+
+export interface UserDetail {
+  user: UserRow;
+  sessions: SessionRow[];
 }
 
 export interface SessionDetail {
@@ -182,6 +195,8 @@ export const adminApi = {
   sessions: (params: Filters) => json<Paged<SessionRow>>(`/api/admin/sessions${qs(params)}`),
   session: (id: string) => json<SessionDetail>(`/api/admin/sessions/${id}`),
   users: (params: Filters) => json<UsersData>(`/api/admin/users${qs(params)}`),
+  user: (id: string) => json<UserDetail>(`/api/admin/users/${id}`),
+  deleteSession: (id: string) => json<{ ok: boolean }>(`/api/admin/sessions/${id}/delete`, { method: 'POST', body: '{}' }),
   flagReasons: () => json<{ reasons: string[] }>('/api/admin/flag-reasons'),
   flag: (id: string, reason: string, flagged: boolean, note?: string) =>
     json<MessageRow>(`/api/admin/messages/${id}/flag`, {
@@ -193,16 +208,16 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ notes, rating }),
     }),
-  async exportData(format: 'csv' | 'json', filters: Filters, flaggedOnly: boolean) {
+  async exportData(format: 'csv' | 'json', filters: Filters, flaggedOnly: boolean, kind: 'conversations' | 'users' = 'conversations') {
     const res = await request('/api/admin/export', {
       method: 'POST',
-      body: JSON.stringify({ format, flagged_only: flaggedOnly, ...filters }),
+      body: JSON.stringify({ format, kind, flagged_only: flaggedOnly, ...filters }),
     });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `simran_conversations.${format}`;
+    a.download = `simran_${kind}.${format}`;
     a.click();
     URL.revokeObjectURL(url);
   },

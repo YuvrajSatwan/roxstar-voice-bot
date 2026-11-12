@@ -12,6 +12,7 @@ import {
   type UsersData,
 } from './api';
 import { SessionReplay } from './SessionReplay';
+import { UserDrawer } from './UserDrawer';
 import './admin.css';
 
 const EXIT_LABELS: Record<string, string> = {
@@ -23,7 +24,7 @@ const EXIT_LABELS: Record<string, string> = {
 };
 
 const fmtDuration = (s: number | null) => (s === null ? '–' : s >= 60 ? `${Math.floor(s / 60)}m ${Math.round(s % 60)}s` : `${Math.round(s)}s`);
-const fmtMs = (v: number | null) => (v === null ? '–' : `${Math.round(v)}ms`);
+const fmtMs = (v: number | null) => (v === null ? '–' : v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '–');
 
 function KeyGate({ onSubmit, error }: { onSubmit: (key: string) => void; error: string }) {
@@ -57,7 +58,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
   );
 }
 
-function Overview({ days }: { days: number }) {
+function Overview({ days, refreshKey }: { days: number; refreshKey: number }) {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [funnel, setFunnel] = useState<FunnelData | null>(null);
   const [error, setError] = useState('');
@@ -76,7 +77,7 @@ function Overview({ days }: { days: number }) {
     return () => {
       alive = false;
     };
-  }, [days]);
+  }, [days, refreshKey]);
 
   if (error) return <p className="error">{error}</p>;
   if (!metrics || !funnel) return <p className="muted">Loading metrics…</p>;
@@ -84,15 +85,21 @@ function Overview({ days }: { days: number }) {
   return (
     <>
       <section className="kpis">
-        <Kpi label="Total calls" value={String(metrics.total_conversations)} hint={`last ${days} days`} />
+        <Kpi label="Total calls" value={String(metrics.total_conversations)} hint={`last ${days} ${days === 1 ? 'day' : 'days'}`} />
+        <Kpi label="Unique users" value={String(metrics.unique_users)} hint="who talked to Simran" />
         <Kpi label="Reached duet pitch" value={`${metrics.onboarding_completion_rate}%`} hint="onboarding completion" />
         <Kpi label="Duet conversion" value={`${metrics.duet_conversion_rate}%`} hint={`solo ${metrics.solo_conversion_rate}%`} />
         <Kpi label="2-decline exits" value={`${metrics.two_decline_exit_rate}%`} hint={`abandoned ${metrics.abandoned_rate}%`} />
         <Kpi label="Avg call length" value={fmtDuration(metrics.avg_duration_seconds)} />
         <Kpi
-          label="Latency p50 / p95"
+          label="Response time p50 / p95"
           value={`${fmtMs(metrics.ttft_p50_ms)} / ${fmtMs(metrics.ttft_p95_ms)}`}
-          hint={`${metrics.ttft_samples} turns, TTFT`}
+          hint={metrics.ttft_samples ? `${metrics.ttft_samples} turns, user stops to Simran starts` : 'no latency samples yet'}
+        />
+        <Kpi
+          label="Profile completeness"
+          value={metrics.profile_completeness_pct === null ? '–' : `${metrics.profile_completeness_pct}%`}
+          hint="avg fields filled per user"
         />
       </section>
 
@@ -139,32 +146,34 @@ function Overview({ days }: { days: number }) {
         {funnel.daily.length === 0 ? (
           <p className="muted">No data yet.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Calls</th>
-                <th>Reached pitch</th>
-                <th>Handoffs</th>
-                <th>Conversion</th>
-                <th>TTFT p50</th>
-                <th>TTFT p95</th>
-              </tr>
-            </thead>
-            <tbody>
-              {funnel.daily.map((d) => (
-                <tr key={d.date}>
-                  <td>{d.date}</td>
-                  <td>{d.sessions}</td>
-                  <td>{d.reached_pitch}</td>
-                  <td>{d.handoffs}</td>
-                  <td>{d.conversion_pct}%</td>
-                  <td>{fmtMs(d.ttft_p50_ms)}</td>
-                  <td>{fmtMs(d.ttft_p95_ms)}</td>
+          <div className="scroll">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Calls</th>
+                  <th>Reached pitch</th>
+                  <th>Handoffs</th>
+                  <th>Conversion</th>
+                  <th>Response p50</th>
+                  <th>Response p95</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {funnel.daily.map((d) => (
+                  <tr key={d.date}>
+                    <td>{d.date}</td>
+                    <td>{d.sessions}</td>
+                    <td>{d.reached_pitch}</td>
+                    <td>{d.handoffs}</td>
+                    <td>{d.conversion_pct}%</td>
+                    <td>{fmtMs(d.ttft_p50_ms)}</td>
+                    <td>{fmtMs(d.ttft_p95_ms)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </>
@@ -188,7 +197,7 @@ function Pager({ page, pageSize, total, onPage }: { page: number; pageSize: numb
   );
 }
 
-function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
+function Sessions({ onOpen, refreshKey }: { onOpen: (id: string) => void; refreshKey: number }) {
   const [filters, setFilters] = useState<Filters>({ exit_reason: '', role: '', q: '', date_from: '', date_to: '', flagged: false });
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Paged<SessionRow> | null>(null);
@@ -197,7 +206,7 @@ function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
   const load = useCallback(() => {
     setError('');
     adminApi.sessions({ ...filters, page, page_size: 20 }).then(setData).catch((e: Error) => setError(e.message));
-  }, [filters, page]);
+  }, [filters, page, refreshKey]);
 
   useEffect(load, [load]);
 
@@ -218,15 +227,12 @@ function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
             </option>
           ))}
         </select>
-        <input placeholder="Musical role" value={String(filters.role)} onChange={(e) => set('role', e.target.value)} />
+        <input placeholder="Listener or singer" value={String(filters.role)} onChange={(e) => set('role', e.target.value)} />
         <input type="date" value={String(filters.date_from)} onChange={(e) => set('date_from', e.target.value)} aria-label="From date" />
         <input type="date" value={String(filters.date_to)} onChange={(e) => set('date_to', e.target.value)} aria-label="To date" />
         <label className="check">
           <input type="checkbox" checked={Boolean(filters.flagged)} onChange={(e) => set('flagged', e.target.checked)} /> Flagged only
         </label>
-        <button type="button" className="btn btn--small" onClick={load}>
-          <RefreshCw size={13} /> Refresh
-        </button>
         <button type="button" className="btn btn--small" onClick={() => adminApi.exportData('csv', filters, false)}>
           <Download size={13} /> CSV
         </button>
@@ -249,7 +255,7 @@ function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
                   <th>Phase</th>
                   <th>Turns</th>
                   <th>Length</th>
-                  <th>Avg TTFT</th>
+                  <th>Avg response</th>
                   <th></th>
                 </tr>
               </thead>
@@ -272,7 +278,7 @@ function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
                     <td>
                       <span className={`tag tag--${s.exit_reason || 'live'}`}>{s.exit_reason ? EXIT_LABELS[s.exit_reason] || s.exit_reason : 'In progress'}</span>
                     </td>
-                    <td>{s.final_stage}</td>
+                    <td>{s.final_stage} / 4</td>
                     <td>{s.total_turns}</td>
                     <td>{fmtDuration(s.duration_seconds)}</td>
                     <td>{fmtMs(s.avg_ttft_ms)}</td>
@@ -289,7 +295,7 @@ function Sessions({ onOpen }: { onOpen: (id: string) => void }) {
   );
 }
 
-function Users() {
+function Users({ onOpenUser, refreshKey }: { onOpenUser: (id: string) => void; refreshKey: number }) {
   const [filters, setFilters] = useState({ city: '', role: '', song: '', q: '' });
   const [page, setPage] = useState(1);
   const [data, setData] = useState<UsersData | null>(null);
@@ -298,7 +304,7 @@ function Users() {
   useEffect(() => {
     setError('');
     adminApi.users({ ...filters, page, page_size: 20 }).then(setData).catch((e: Error) => setError(e.message));
-  }, [filters, page]);
+  }, [filters, page, refreshKey]);
 
   const set = (k: string, v: string) => {
     setPage(1);
@@ -336,45 +342,60 @@ function Users() {
           <input placeholder="City" value={filters.city} onChange={(e) => set('city', e.target.value)} />
           <input placeholder="Role (listener, singer…)" value={filters.role} onChange={(e) => set('role', e.target.value)} />
           <input placeholder="Favourite song" value={filters.song} onChange={(e) => set('song', e.target.value)} />
+          <button type="button" className="btn btn--small" onClick={() => setFilters({ city: '', role: '', song: '', q: '' })}>
+            Clear filters
+          </button>
+          <button type="button" className="btn btn--small" onClick={() => adminApi.exportData('csv', {}, false, 'users')}>
+            <Download size={13} /> Users CSV
+          </button>
         </div>
         {error && <p className="error">{error}</p>}
         {!data && !error && <p className="muted">Loading users…</p>}
         {data && (
           <>
             <div className="scroll">
-              <table className="table">
+              <table className="table table--click">
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>City</th>
                     <th>Work</th>
                     <th>Role</th>
-                    <th>Comfort</th>
                     <th>Taste</th>
                     <th>Loop song</th>
                     <th>Found via</th>
-                    <th>Coins</th>
+                    <th>Calls</th>
+                    <th>Last call</th>
+                    <th>Profile</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.items.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="muted">
+                      <td colSpan={10} className="muted">
                         No users match these filters.
                       </td>
                     </tr>
                   )}
                   {data.items.map((u) => (
-                    <tr key={u.user_id}>
-                      <td>{u.name || u.identity}</td>
+                    <tr key={u.user_id} onClick={() => onOpenUser(u.user_id)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onOpenUser(u.user_id)}>
+                      <td>
+                        {u.name || u.identity}
+                        {u.visitor ? <span className="muted"> · {u.visitor.slice(0, 6)}</span> : null}
+                      </td>
                       <td>{u.location || '–'}</td>
                       <td>{u.occupation || '–'}</td>
                       <td>{u.musical_role || '–'}</td>
-                      <td>{u.singing_comfort || '–'}</td>
                       <td>{u.music_taste.join(', ') || '–'}</td>
                       <td>{u.favorite_song || '–'}</td>
                       <td>{u.referral_source || '–'}</td>
-                      <td>{u.coin_balance}</td>
+                      <td>{u.session_count}</td>
+                      <td>{fmtDate(u.last_session_at)}</td>
+                      <td>
+                        <span className="meter" title={`${u.completeness}% of fields filled`}>
+                          <span style={{ width: `${u.completeness}%` }} />
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -390,11 +411,12 @@ function Users() {
 
 export function AdminApp() {
   const [authed, setAuthed] = useState(Boolean(adminKey.get()));
-  const [checkingAuth, setCheckingAuth] = useState(!adminKey.get());
   const [gateError, setGateError] = useState('');
   const [tab, setTab] = useState<'overview' | 'sessions' | 'users'>('overview');
   const [days, setDays] = useState(30);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [dark, setDark] = useState<boolean>(() => {
     try {
       return localStorage.getItem('roxstar_admin_theme') === 'dark';
@@ -408,16 +430,9 @@ export function AdminApp() {
     adminApi
       .authMode()
       .then((m) => {
-        if (!m.auth_required) {
-          setAuthed(true);
-        }
+        if (!m.auth_required) setAuthed(true);
       })
-      .catch((err) => {
-        setGateError(`Unable to reach backend (${err.message || err}). Ensure STS server is running.`);
-      })
-      .finally(() => {
-        setCheckingAuth(false);
-      });
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -463,10 +478,15 @@ export function AdminApp() {
               ))}
             </select>
           )}
+          {authed && (
+            <button type="button" className="btn btn--small" onClick={() => setRefreshKey((k) => k + 1)}>
+              <RefreshCw size={13} /> Refresh
+            </button>
+          )}
           <button type="button" className="icon-btn" onClick={() => setDark((d) => !d)} aria-label="Toggle theme">
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          {authed && (
+          {authed && adminKey.get() && (
             <button
               type="button"
               className="btn btn--small"
@@ -481,19 +501,22 @@ export function AdminApp() {
         </div>
       </header>
       <main className="admin-main">
-        {checkingAuth ? (
-          <p className="muted" style={{ textAlign: 'center', padding: '3rem' }}>Checking authorization…</p>
-        ) : !authed ? (
-          <KeyGate onSubmit={unlock} error={gateError} />
-        ) : tab === 'overview' ? (
-          <Overview days={days} />
-        ) : tab === 'sessions' ? (
-          <Sessions onOpen={setOpenId} />
-        ) : (
-          <Users />
-        )}
+        {!authed && <KeyGate onSubmit={unlock} error={gateError} />}
+        {authed && tab === 'overview' && <Overview days={days} refreshKey={refreshKey} />}
+        {authed && tab === 'sessions' && <Sessions onOpen={setOpenId} refreshKey={refreshKey} />}
+        {authed && tab === 'users' && <Users onOpenUser={setOpenUserId} refreshKey={refreshKey} />}
       </main>
-      {authed && openId && <SessionReplay sessionId={openId} onClose={() => setOpenId(null)} />}
+      {authed && openUserId && <UserDrawer userId={openUserId} onClose={() => setOpenUserId(null)} onOpenSession={setOpenId} />}
+      {authed && openId && (
+        <SessionReplay
+          sessionId={openId}
+          onClose={() => setOpenId(null)}
+          onDeleted={() => {
+            setOpenId(null);
+            setRefreshKey((k) => k + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

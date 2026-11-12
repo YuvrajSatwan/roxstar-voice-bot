@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
+from . import conversation_rules as rules
 from . import repository as repo
 from .database import Database, acquire_database, release_database
 
@@ -75,6 +76,7 @@ class NullRecorder:
     def record_user_turn(self, text: str) -> None: ...
     def record_assistant_turn(self, text: str) -> None: ...
     def record_metrics(self, ttft_ms: float | None, tokens_per_second: float | None, duration_s: float | None) -> None: ...
+    def record_response_latency(self, ms: float) -> None: ...
     def record_profile_field(self, field: str, value: str) -> None: ...
     def record_coin_balance(self, balance: int) -> None: ...
     def set_stage(self, stage: int) -> None: ...
@@ -130,6 +132,14 @@ class SessionRecorder:
         self._last_turn_speaker: str | None = None
         self._pending_metrics: tuple[float | None, float | None, float | None, float] | None = None
         self._pending_fields: dict[str, str] = {}
+        self._pending_latency: tuple[float, float] | None = None
+        self._open_question: dict[str, Any] | None = None
+        self._fallbacks: list[asyncio.TimerHandle] = []
+        self._deferred_list: list[tuple[str, dict[str, Any]]] = []
+        self._assistant_texts: list[str] = []
+        self._occupation_parts: list[str] = []
+        self._coins_noted = False
+        self.fallback_wait_seconds = 4.0
 
     # ------------------------------------------------------------ lifecycle
     @_safe
@@ -142,6 +152,7 @@ class SessionRecorder:
         """Close the session row and flush the queue. Returns False if operations were lost."""
         if self._closed:
             return True
+        self._flush_fallbacks()
         self._closed = True
         duration = time.monotonic() - self._t0
         reason = self._exit_reason or default_reason
@@ -263,6 +274,8 @@ class SessionRecorder:
             "speaker": speaker, "transcript": text, "timestamp": _now(),
             "ttft_ms": extra.get("ttft_ms"), "tokens_per_second": extra.get("tokens_per_second"),
             "audio_duration_seconds": extra.get("audio_duration_seconds"),
+            "flagged_issue": bool(extra.get("flagged_issue", False)),
+            "admin_tag": extra.get("admin_tag"), "flag_note": extra.get("flag_note"),
         }
 
         async def op(db: Database) -> None:
@@ -302,6 +315,12 @@ class SessionRecorder:
             self._pending_fields = {}
         self._last_user = msg
         self._last_turn_speaker = "User"
+        question = self._open_question
+        if question is not None and not question["used"]:
+            question["used"] = True
+            self._deferred_list.append((question["topic"], msg))
+            self._fallbacks.append(asyncio.get_running_loop().call_later(
+                self.fallback_wait_seconds, self._fallback_capture, question["topic"], msg))
 
     @_safe
     def record_assistant_turn(self, text: str) -> None:
@@ -310,27 +329,77 @@ class SessionRecorder:
             return
         ttft = tps = dur = None
         pending = self._pending_metrics
+        used_pending = False
         if pending is not None and time.monotonic() - pending[3] < 20.0:
             ttft, tps, dur, _ = pending
-            self._pending_metrics = None
-        msg = self._new_message("Simran", text, ttft_ms=ttft, tokens_per_second=tps, audio_duration_seconds=dur)
+            used_pending = True
+        self._pending_metrics = None
+        measured = self._pending_latency
+        if measured is not None and time.monotonic() - measured[1] < 30.0:
+            ttft = measured[0]  # the real "user stopped -> Simran started" delay beats the provider number
+        elif ttft is not None:
+            self._ttfts.append(float(ttft))
+        self._pending_latency = None
+
+        # Automatic review flags
+        flag_tag = flag_note = None
+        norm = "".join(ch for ch in text.lower() if ch.isalnum())
+        if len(norm) >= 25 and norm in self._assistant_texts:
+            flag_tag, flag_note = "repeated_turn", "Auto: Simran repeated an earlier line word for word."
+        elif rules.INTERVIEW_PHRASE.search(text):
+            flag_tag, flag_note = "interview_phrase", "Auto: interview-style lead-in (ye bataiye)."
+        self._assistant_texts.append(norm)
+
+        msg = self._new_message("Simran", text, ttft_ms=ttft, tokens_per_second=tps, audio_duration_seconds=dur,
+                                flagged_issue=bool(flag_tag), admin_tag=flag_tag, flag_note=flag_note)
+        msg["lat_set"] = measured is not None
+        msg["metrics_set"] = used_pending
         self._last_assistant = msg
         self._last_turn_speaker = "Simran"
+
+        # Funnel phase, exit and the open profile question, all read from what she said
+        self.set_stage(rules.detect_stage(text))
+        if rules.is_exit_line(text):
+            self.mark_exit("two_decline_exit")
+        if not self._coins_noted and "welcome coins" in text.lower():
+            self._coins_noted = True  # she told the user about the 50 welcome coins
+            self.set_stage(3)
+            self.record_coin_balance(50)
+        topic = rules.detect_question_topic(text)
+        self._open_question = {"topic": topic, "used": False, "captured": False} if topic else None
 
     @_safe
     def record_metrics(self, ttft_ms: float | None, tokens_per_second: float | None, duration_s: float | None) -> None:
         """Attach latency metrics to the Simran turn they belong to (they may arrive before or after it)."""
-        if ttft_ms is not None and ttft_ms < 0:
-            ttft_ms = None  # "unknown" sentinel from the metrics source, not a real latency
-        if ttft_ms is not None:
-            self._ttfts.append(float(ttft_ms))
+        if (ttft_ms is not None and ttft_ms < 0) or (duration_s is not None and duration_s < 0.3):
+            return  # "unknown" sentinel or an empty/interrupted generation: not a usable measurement
+        if ttft_ms is not None and ttft_ms < 20:
+            ttft_ms = None  # the provider reports a few milliseconds here, which cannot be real audio latency
         last = self._last_assistant
-        if last is not None and last.get("ttft_ms") is None and time.monotonic() - last["time"] < 20.0:
-            last.update(ttft_ms=ttft_ms, tokens_per_second=tokens_per_second, audio_duration_seconds=duration_s)
-            self._update_message(last["id"], ttft_ms=ttft_ms, tokens_per_second=tokens_per_second,
-                                 audio_duration_seconds=duration_s)
+        if last is not None and not last.get("metrics_set") and time.monotonic() - last["time"] < 20.0:
+            values: dict[str, Any] = {"tokens_per_second": tokens_per_second, "audio_duration_seconds": duration_s}
+            last["metrics_set"] = True
+            # A measured response latency (user stops -> Simran starts) always wins over the provider value
+            if last.get("ttft_ms") is None and ttft_ms is not None:
+                values["ttft_ms"] = last["ttft_ms"] = float(ttft_ms)
+                self._ttfts.append(float(ttft_ms))
+            self._update_message(last["id"], **values)
         else:
             self._pending_metrics = (ttft_ms, tokens_per_second, duration_s, time.monotonic())
+
+    @_safe
+    def record_response_latency(self, ms: float) -> None:
+        """Measured delay between the user finishing speaking and Simran starting to speak."""
+        if ms is None or ms < 0 or ms > 60000:
+            return
+        self._ttfts.append(float(ms))
+        last = self._last_assistant
+        if (last is not None and not last.get("lat_set") and self._last_turn_speaker == "Simran"
+                and time.monotonic() - last["time"] < 3.0):
+            last.update(ttft_ms=float(ms), lat_set=True)
+            self._update_message(last["id"], ttft_ms=float(ms))
+        else:
+            self._pending_latency = (float(ms), time.monotonic())
 
     @_safe
     def record_profile_field(self, field: str, value: str) -> None:
@@ -345,6 +414,8 @@ class SessionRecorder:
             self.set_stage(3)
         if field == "duet_attempted":
             self.set_stage(4)
+        if self._open_question is not None and field == self._open_question["topic"]:
+            self._open_question["captured"] = True
         # Attach the capture to the user turn that produced it
         if self._last_user is not None:
             self._last_user["fields"][field] = value
@@ -372,6 +443,56 @@ class SessionRecorder:
                     await s.commit()
 
         self._enqueue(op)
+
+    def _flush_fallbacks(self) -> None:
+        """Run pending fallback captures now (the session may end before the timer fires)."""
+        for handle in self._fallbacks:
+            handle.cancel()
+        self._fallbacks = []
+        pending, self._deferred_list = self._deferred_list, []
+        for topic, message in pending:
+            self._fallback_capture(topic, message)
+
+    def _fallback_capture(self, topic: str, msg: dict[str, Any]) -> None:
+        """Store the user's answer to the question Simran just asked when the model did not call save_profile.
+
+        Marked ``_auto`` in the message so the dashboard shows it as inferred, not as a tool capture.
+        """
+        try:
+            if self._closed or msg.get("fallback_done"):
+                return
+            msg["fallback_done"] = True
+            question = self._open_question
+            if question is not None and question["topic"] == topic and question["captured"]:
+                return
+            if topic in msg["fields"]:
+                return
+            value = rules.clean_answer(topic, msg["text"])
+            if not value:
+                return
+            if topic == "occupation":
+                self._occupation_parts.append(value)
+                value = ", ".join(self._occupation_parts)
+            msg["fields"][topic] = value
+            msg["fields"][rules.AUTO_KEY] = list(msg["fields"].get(rules.AUTO_KEY, [])) + [topic]
+            self._update_message(msg["id"], profile_fields_captured=dict(msg["fields"]))
+            if topic in _STAGE2_FIELDS:
+                self.set_stage(2)
+            if topic in _STAGE3_FIELDS:
+                self.set_stage(3)
+
+            async def op(db: Database) -> None:
+                async with db.session() as s:
+                    if self._user_id is None:
+                        user = await repo.get_or_create_user(s, self.identity)
+                        self._user_id = user.id
+                    await repo.apply_profile_field(s, self._user_id, topic, value)
+                    await s.commit()
+
+            if topic in repo.SCALAR_FIELDS or topic in repo.LIST_FIELDS:
+                self._enqueue(op)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Fallback capture failed: %s", exc)
 
     @_safe
     def set_stage(self, stage: int) -> None:

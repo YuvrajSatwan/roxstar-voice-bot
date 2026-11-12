@@ -31,7 +31,8 @@ async def get_or_create_user(s: AsyncSession, identity: str | None) -> User:
     key = clean_identity(identity)
     user = (await s.execute(select(User).where(User.identity == key))).scalar_one_or_none()
     if user is None:
-        user = User(identity=key, name=None if key == "guest" else (identity or "").strip()[:128])
+        display = (identity or "").split("~", 1)[0].strip()[:128]  # strip the visitor-id suffix
+        user = User(identity=key, name=None if key == "guest" else (display or None))
         s.add(user)
         await s.flush()
     return user

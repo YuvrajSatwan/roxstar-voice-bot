@@ -54,11 +54,13 @@ def generate_sts_room_code() -> str:
     return f"sts-simran-{suffix}"
 
 
-def create_participant_token(settings: StsSettings, *, identity: str, room: str) -> str:
+def create_participant_token(
+    settings: StsSettings, *, identity: str, room: str, display_name: str | None = None
+) -> str:
     return (
         api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
         .with_identity(identity)
-        .with_name(identity)
+        .with_name(display_name or identity)
         .with_ttl(timedelta(hours=2))
         .with_grants(
             api.VideoGrants(
@@ -284,7 +286,10 @@ class StsTokenHandler(BaseHTTPRequestHandler):
                 ),
             )
 
-            token = create_participant_token(self.settings, identity=name, room=room)
+            # A per-browser visitor id keeps two people who type the same name apart in the database
+            visitor = re.sub(r"[^a-z0-9]", "", str(body.get("visitor_id", "")).lower())[:16]
+            identity = f"{name}~{visitor}" if visitor else name
+            token = create_participant_token(self.settings, identity=identity, room=room, display_name=name)
             self._send_json(
                 HTTPStatus.OK,
                 {

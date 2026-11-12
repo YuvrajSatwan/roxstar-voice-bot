@@ -19,7 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import EXIT_REASONS, ConversationSession, Message, User, iso
 
-FLAG_REASONS = ("latency_spike", "hallucination", "persona_break", "missed_turn", "too_long", "interrupted", "other")
+FLAG_REASONS = ("latency_spike", "hallucination", "persona_break", "missed_turn", "too_long", "interrupted",
+                "repeated_turn", "interview_phrase", "other")
+PROFILE_FIELDS = ("name", "location", "occupation", "hobbies", "music_taste", "favorite_song", "musical_role",
+                  "singing_comfort", "referral_source", "expectations")
+
+
+def completeness(user: User) -> int:
+    """Percent of the ten profile fields that are filled for this user."""
+    filled = sum(1 for f in PROFILE_FIELDS if getattr(user, f))
+    return round(100 * filled / len(PROFILE_FIELDS))
 HANDOFF_REASONS = ("duet_handoff", "solo_handoff")
 
 
@@ -94,7 +103,13 @@ async def metrics(s: AsyncSession, days: int = 30) -> dict[str, Any]:
         select(func.count(Message.id)).join(ConversationSession, Message.session_id == ConversationSession.id)
         .where(ConversationSession.started_at >= since, Message.flagged_issue.is_(True))
     )).scalar_one()
+    user_ids = {uid for (uid,) in (await s.execute(
+        select(ConversationSession.user_id).where(ConversationSession.started_at >= since).distinct())).all() if uid}
+    users = (await s.execute(select(User).where(User.id.in_(user_ids)))).scalars().all() if user_ids else []
+    avg_complete = round(sum(completeness(u) for u in users) / len(users)) if users else None
     return {
+        "unique_users": len(user_ids),
+        "profile_completeness_pct": avg_complete,
         "window_days": days,
         "total_conversations": total,
         "onboarding_completion_rate": _pct(reached_pitch, total),
@@ -244,13 +259,50 @@ async def list_users(s: AsyncSession, *, page: int = 1, page_size: int = 25, cit
     songs = Counter((sg or "").strip().title() for _, _, sg in everyone if sg and sg.strip())
     return {
         "page": page, "page_size": page_size, "total": total,
-        "items": [u.to_dict() for u in users],
+        "items": [await _user_row(s, u) for u in users],
         "breakdown": {
             "roles": [{"name": k, "count": v} for k, v in roles.most_common(10)],
             "top_cities": [{"name": k, "count": v} for k, v in cities.most_common(10)],
             "top_songs": [{"name": k, "count": v} for k, v in songs.most_common(10)],
         },
     }
+
+
+async def _user_row(s: AsyncSession, u: User) -> dict[str, Any]:
+    count, last = (await s.execute(
+        select(func.count(ConversationSession.id), func.max(ConversationSession.started_at))
+        .where(ConversationSession.user_id == u.id))).one()
+    d = u.to_dict()
+    d.update(session_count=count, last_session_at=iso(last), completeness=completeness(u),
+             visitor=u.identity.split("~", 1)[1] if "~" in u.identity else None)
+    return d
+
+
+async def get_user(s: AsyncSession, user_id: str) -> dict[str, Any] | None:
+    user = await s.get(User, user_id)
+    if user is None:
+        return None
+    sessions = (await s.execute(
+        select(ConversationSession).where(ConversationSession.user_id == user_id)
+        .order_by(ConversationSession.started_at.desc()))).scalars().all()
+    flagged = {sid for (sid,) in (await s.execute(
+        select(Message.session_id).where(Message.session_id.in_([x.id for x in sessions] or [""]),
+                                         Message.flagged_issue.is_(True)).distinct())).all()}
+    rows = []
+    for x in sessions:
+        d = x.to_dict()
+        d["has_flagged_turns"] = x.id in flagged
+        rows.append(d)
+    return {"user": await _user_row(s, user), "sessions": rows}
+
+
+async def delete_session(s: AsyncSession, session_id: str) -> bool:
+    sess = await s.get(ConversationSession, session_id)
+    if sess is None:
+        return False
+    await s.delete(sess)
+    await s.commit()
+    return True
 
 
 # --------------------------------------------------------------- export
@@ -291,12 +343,28 @@ def _csv_safe(value: Any) -> Any:
     return value
 
 
-def rows_to_csv(rows: list[dict[str, Any]]) -> str:
+USER_EXPORT_COLUMNS = ["user_id", "name", "identity", "location", "occupation", "hobbies", "music_taste", "favorite_song",
+                       "musical_role", "singing_comfort", "referral_source", "expectations", "coin_balance",
+                       "is_onboarded", "session_count", "last_session_at", "completeness", "created_at"]
+
+
+async def export_users(s: AsyncSession, *, limit: int = 20000) -> list[dict[str, Any]]:
+    users = (await s.execute(select(User).order_by(User.created_at).limit(max(1, min(limit, 100000))))).scalars().all()
+    return [await _user_row(s, u) for u in users]
+
+
+def _flat(value: Any) -> Any:
+    if isinstance(value, (list, tuple)):
+        return "; ".join(str(v) for v in value)
+    if isinstance(value, dict):
+        return ";".join(f"{k}={v}" for k, v in value.items())
+    return value
+
+
+def rows_to_csv(rows: list[dict[str, Any]], columns: list[str] | None = None) -> str:
     buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=_EXPORT_COLUMNS, extrasaction="ignore")
+    writer = csv.DictWriter(buf, fieldnames=columns or _EXPORT_COLUMNS, extrasaction="ignore")
     writer.writeheader()
     for r in rows:
-        r = dict(r)
-        r["profile_fields_captured"] = ";".join(f"{k}={v}" for k, v in (r.get("profile_fields_captured") or {}).items())
-        writer.writerow({k: _csv_safe(v) for k, v in r.items()})
+        writer.writerow({k: _csv_safe(_flat(v)) for k, v in r.items()})
     return buf.getvalue()

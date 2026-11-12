@@ -78,6 +78,15 @@ py -m pytest tests/ -v            # includes tests/test_persistence.py (13 tests
 npm --prefix web run build
 ```
 
+## 6b. How the data is made reliable
+
+* **Profile fields.** The model sometimes skips `save_profile`. The recorder reads which question Simran just asked (city, work, free time, how they found Roxstar, listener or singer, and so on) and, if no tool call arrives within 4 seconds or the call ends, stores the user's short answer. These are shown as `field: value (auto)` and are only as accurate as the transcript. Tool captures show without the label.
+* **Funnel phase and exit.** Phase 2, 3 and 4 are inferred from fields and from Simran's own lines; an exit excuse such as "Ritika ka phone..., bye!" is recorded as `two_decline_exit` even though no backend tool ran.
+* **Response time.** The dashboard shows the time from the user finishing to Simran starting, measured in `worker.py` from the `user_state_changed` and `agent_state_changed` events. If LiveKit does not emit those events with your setup the column stays empty rather than showing wrong numbers. The provider's own TTFT (negative or a few milliseconds) is discarded.
+* **Auto flags.** Lines repeated word for word and "ye bataiye" style lead-ins are flagged automatically, so prompt fixes can be checked in the Flagged filter.
+* **Users.** Each browser gets a random visitor id, so the users table separates people who typed the same name. In the real app, pass the Roxstar user id as the identity instead.
+* **Repairing old rows:** `py -m sts_lab.db.maintenance` (safe to rerun; it never edits transcripts or profile data).
+
 ## 7. Production notes and known limits
 
 0. **User transcripts are approximate.** The text for user turns comes from Gemini's separate input transcription, not from what the model "hears". Simran understands the audio directly, so she can answer correctly even when a stored user line is wrong (typical for Hinglish: wrong words, or Devanagari versus Roman script). `language_codes` hints are not available on the Gemini Developer API (the SDK rejects them), so accuracy cannot be tuned there. For exact text, run a dedicated speech-to-text over saved audio for logging only.

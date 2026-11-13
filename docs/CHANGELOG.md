@@ -5,6 +5,24 @@ All notable changes, architectural pivots, and major additions to the **RoxStar 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [Unreleased] - 2026-11-13
+
+### Added (RoxStar integration, branch `feat/integrate-simran-onboarding`, Phase 1)
+All of this is **off by default**. With `STS_AUTH_MODE` unset the lab behaves exactly as before.
+- **Real login on the token server** ([`roxstar_auth.py`](file:///y:/roxstar/sts_lab/roxstar_auth.py), [`token_server.py`](file:///y:/roxstar/sts_lab/token_server.py)): with `STS_AUTH_MODE=roxstar`, `POST /token` needs a RoxStar access token (HS256, `exp` required, `type` must be `access`, user id from the `userID` claim). Refresh tokens (valid 365 days), expired, forged, `alg:none` and wrong-secret tokens all get one generic `401`. The server refuses to start in this mode without `JWT_API_KEY`.
+- **Private room per user**: the room is always `sts-simran-<userID>` and the LiveKit identity `rx-<userID>`. A room name sent by the browser is ignored, so one user can never enter another's room. `POST /rooms` and the demo `/duets` list are switched off in this mode.
+- **No second Simran**: before sending an agent, the server checks the room's existing dispatches. A WebView refresh or double tap re-uses the running Simran instead of starting another.
+- **Cost protection**: `STS_MAX_CONCURRENT_SESSIONS` (default 50; extra users get `503 busy`), `STS_USER_SESSIONS_PER_HOUR` (default 3; `429 rate_limited`; refreshes and busy answers do not use the allowance up) in [`session_limits.py`](file:///y:/roxstar/sts_lab/session_limits.py), and `STS_MAX_SESSION_SEC` (default 480): Simran wraps up warmly at the limit and is powered off 60 s later at the latest ([`worker.py`](file:///y:/roxstar/sts_lab/worker.py), new exit reason `time_limit_exit`).
+- **Live duet list** ([`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py), [`rox_services.py`](file:///y:/roxstar/sts_lab/rox_services.py)): in RoxStar mode `DuetRoomRegistry(strict=True)` has no demo rooms, refreshes from rox-partyroom (2 s timeout, 60 s cache) and `get_room` accepts only an exact id from the live list. If the backend is down or empty, Simran offers solo recording. `navigate_to_duet` refuses an unknown or just-closed room.
+- **Popup cancel signal**: after a successful token, the server tells rox-chat in the background that the user opened Simran (1.5 s timeout, 2 retries, never blocks, secret never logged).
+- **WebView page** (`/simran`, [`web/src/simran/`](file:///y:/roxstar/sts_lab/web/src/simran/SimranWebViewPage.tsx), [`web/src/bridge.ts`](file:///y:/roxstar/sts_lab/web/src/bridge.ts)): party-room look, one "Talk to Simran" tap (needed for sound and mic permission), friendly screens for busy / rate-limited / no login / mic denied, and `simran.ready` / `simran.close` messages to the app. It closes only after Simran has powered off, hangs up if the app stays in the background for 30 s, and the first close message wins. The login token is kept in memory only; the `?dev_token=` shortcut exists only in dev builds.
+- New env vars (placeholders in `.env.example`): `STS_AUTH_MODE`, `JWT_API_KEY`, `STS_MAX_CONCURRENT_SESSIONS`, `STS_USER_SESSIONS_PER_HOUR`, `STS_MAX_SESSION_SEC`, `PARTYROOM_BASE_URL`, `CHAT_BASE_URL`, `SIMRAN_INTERNAL_SECRET`. New dependency: `PyJWT`.
+- 170 tests pass (64 existing + 106 new in `test_roxstar_auth.py`, `test_session_limits.py`, `test_duet_registry_remote.py`, `test_rox_services.py`, `test_token_server_roxstar.py`).
+
+### Changed
+- `tests/conftest.py` no longer lets tests read a developer's real `.env` (one persistence test was failing on any machine with a live `DATABASE_URL`).
+- Not changed on purpose: coins stay static (no wallet writes) and `prompt.py` is untouched. The coin wording, AI-disclosure and voice-data questions are tracked as open items.
+
 
 ## [Unreleased] - 2026-11-11
 

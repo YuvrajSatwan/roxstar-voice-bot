@@ -21,6 +21,7 @@ import logging
 import os
 import time
 from dataclasses import asdict, dataclass, field
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -225,7 +226,32 @@ class DuetRoom:
 class DuetRoomRegistry:
     """Registry of live duet rooms so Simran only suggests REAL available rooms."""
 
-    def __init__(self, initial_rooms: list[DuetRoom] | None = None) -> None:
+    # How long a fetched list is trusted. A short wait after an EMPTY answer lets Simran notice quickly
+    # when rooms come back; a longer wait after a good answer keeps rox-partyroom from being hammered.
+    CACHE_TTL_SEC = 60.0
+    EMPTY_CACHE_TTL_SEC = 10.0
+
+    def __init__(
+        self,
+        initial_rooms: list[DuetRoom] | None = None,
+        *,
+        fetcher: Callable[[], list[dict[str, str]]] | None = None,
+        strict: bool = False,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        """
+        fetcher: asks the real RoxStar backend for live rooms (see rox_services.fetch_active_duets).
+        strict:  production safety mode. Simran may ONLY use rooms the backend really returned.
+                 - starts with NO rooms (no mock data)
+                 - get_room() accepts an exact room id only (no fuzzy guessing, no "first room" fallback)
+        With the defaults (no fetcher, not strict) behaviour is the same as the original lab.
+        """
+        self._fetcher = fetcher
+        self.strict = strict
+        self._clock = clock
+        self._fetched_at: float | None = None
+        if strict and initial_rooms is None:
+            initial_rooms = []
         if initial_rooms is not None:
             self._rooms: dict[str, DuetRoom] = {r.room_id: r for r in initial_rooms}
         else:
@@ -280,9 +306,47 @@ class DuetRoomRegistry:
         matched = [r for r in rooms if g_clean in r.genre.lower() or g_clean in r.title.lower()]
         return matched if matched else rooms
 
+    def refresh(self) -> None:
+        """Re-read the live room list from the backend if our copy is old. BLOCKING (up to ~2 s).
+
+        From async code call it as:  await asyncio.to_thread(registry.refresh)
+        If the backend is down or has no rooms, the list becomes empty and Simran offers solo recording.
+        It never raises.
+        """
+        if self._fetcher is None:
+            return
+        now = self._clock()
+        if self._fetched_at is not None:
+            ttl = self.CACHE_TTL_SEC if self._rooms else self.EMPTY_CACHE_TTL_SEC
+            if now - self._fetched_at < ttl:
+                return
+        try:
+            items = self._fetcher()
+        except Exception as exc:  # a broken fetcher must not break the conversation
+            logger.warning("Duet fetcher failed (%s); treating as no live rooms", type(exc).__name__)
+            items = []
+        rooms: dict[str, DuetRoom] = {}
+        for item in items:
+            rid = str(item.get("room_id", "")).strip()
+            if not rid:
+                continue
+            rooms[rid] = DuetRoom(
+                room_id=rid,
+                title=item.get("title") or "a live duet",
+                genre=item.get("genre") or "Music",
+                host_name=item.get("host_name") or "the host",
+                song_title=item.get("song_title") or item.get("title") or "a duet",
+                singers_count=1,
+            )
+        self._rooms = rooms
+        self._fetched_at = now
+
     def get_room(self, room_id: str) -> DuetRoom | None:
         if room_id in self._rooms:
             return self._rooms[room_id]
+        if self.strict:
+            # Production: an id that is not in the live list does not exist. Never guess, never substitute.
+            return None
         rid_lower = room_id.strip().lower()
         for r in self._rooms.values():
             if (

@@ -74,6 +74,10 @@
 
 ## 2. Currently Ongoing Tasks
 
+- [x] **RoxStar integration, Phase 1 (2026-11-13, branch `feat/integrate-simran-onboarding`)**: login check, private per-user room, no second Simran, capacity / per-user / session-length limits, live duet list adapter (strict mode), popup-cancel call, and the `/simran` WebView page with its app bridge. 170 tests pass; frontend builds. Details in `CHANGELOG.md` and `PROJECT_CONTEXT.md` section 11.
+- [ ] **Next phases (other repos, each needs approval)**: rox-partyroom `active-duets` endpoint, rox-chat welcome message / queue / popup / `session-started` endpoint, Rox-Auth-K8s enqueue helper, mobile WebView work.
+
+
 - [x] **Voice Parameter Alignment (2026-11-11)**: Frontend fallback/display voice labels now default to `Leda`, matching `config.py`. The backend still reports the real voice via telemetry.
 
 ---

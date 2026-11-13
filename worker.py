@@ -54,6 +54,7 @@ from sts_lab.prompt import (
     SIMRAN_ONBOARDING_SYSTEM_PROMPT,
 )
 from sts_lab.db import create_recorder
+from sts_lab.rox_services import fetch_active_duets
 from sts_lab.onboarding import (
     DuetRoomRegistry,
     OnboardingTracker,
@@ -117,7 +118,16 @@ async def entrypoint(ctx: JobContext) -> None:
             initial_user = p.identity or p.name or "Guest"
             break
     profile = UserDiscoveryProfile(user_id=initial_user)
-    tracker = OnboardingTracker(profile=profile, store=store)
+
+    # RoxStar mode: Simran may only send people to duet rooms that REALLY exist right now
+    # (fetched live from rox-partyroom). Lab mode keeps the old built-in demo rooms.
+    duet_registry: DuetRoomRegistry | None = None
+    if settings.is_roxstar_mode:
+        duet_registry = DuetRoomRegistry(
+            strict=True,
+            fetcher=lambda: fetch_active_duets(settings.partyroom_base_url, settings.simran_internal_secret),
+        )
+    tracker = OnboardingTracker(profile=profile, store=store, duet_registry=duet_registry)
     logger.info("Initialized fresh OnboardingTracker for new visitor user=%s", tracker.profile.user_id)
 
     # Non-blocking conversation persistence: every call below only enqueues work,
@@ -174,8 +184,15 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def check_available_duets(genre: str | None = None) -> str:
         recorder.set_stage(4)  # the duet pitch (Phase 4) has been reached
+        # Ask rox-partyroom for the live list (cached 60 s). Runs in a thread so audio never waits on the network.
+        await asyncio.to_thread(tracker.duet_registry.refresh)
         rooms = tracker.duet_registry.list_available(genre)
         if not rooms:
+            if tracker.duet_registry.strict:
+                return (
+                    "No duet rooms are live right now. Do NOT invent or mention any room. "
+                    "Instead, warmly invite them to record a song solo, and use navigate_to_recording if they agree."
+                )
             return "No duet rooms currently available."
         formatted = [
             f"Option {i+1}: {r.host_name} is live singing '{r.song_title}' (Room ID: {r.room_id}, Genre: {r.genre})"
@@ -191,6 +208,16 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def navigate_to_duet(room_id: str) -> str:
         logger.info("Directing user to duet room: %s", room_id)
+        if tracker.duet_registry.strict:
+            # Production safety: only a room from the live list is real. If the id is unknown (or the room
+            # just closed), do NOT hand off. Nothing is announced and Simran stays on the mic.
+            await asyncio.to_thread(tracker.duet_registry.refresh)
+            if tracker.duet_registry.get_room(room_id) is None:
+                logger.warning("Refused handoff to unknown or closed duet room %r", room_id)
+                return (
+                    "That room is not available any more. Do NOT mention an error. "
+                    "Casually offer another live room from the list, or invite them to record a song solo instead."
+                )
         recorder.mark_exit("duet_handoff")
         recorder.set_stage(4)
         tracker.save_field("duet_attempted", "true")
@@ -730,8 +757,49 @@ async def entrypoint(ctx: JobContext) -> None:
 
     watcher_task = asyncio.create_task(auto_disconnect_watcher())
 
+    async def max_session_watcher() -> None:
+        """Cost cap: no single conversation may run forever (every minute costs Gemini + LiveKit money).
+
+        At STS_MAX_SESSION_SEC (default 8 min) Simran wraps up warmly, like her normal exit.
+        If she somehow has not powered off 60 s later, we switch her off by force.
+        """
+        limit = settings.max_session_sec
+        if limit <= 0:
+            return  # 0 = no limit (lab default behaviour is unchanged unless configured)
+        await asyncio.sleep(limit)
+        already_leaving = sign_off_state["in_progress"] or sign_off_state["turned_off"] or tracker.is_simran_away
+        if not already_leaving:
+            logger.info("Session time limit (%ss) reached: Simran is wrapping up", limit)
+            excuse = tracker.get_random_excuse()
+            recorder.mark_exit("time_limit_exit")
+            tracker.mark_simran_away(excuse)
+            sign_off_state["in_progress"] = True
+            sign_off_state["speech_started"] = False
+            sign_off_state["reason"] = excuse
+            publish_data({"type": "roxstar.stage_transferred", "reason": excuse})
+            try:
+                session.generate_reply(
+                    user_input=(
+                        "[SYSTEM ALERT - CRITICAL: Time for this chat is up. YOUR VERY NEXT TURN MUST BE YOUR EXIT. "
+                        "Keep it strictly under 25 words! DO NOT ASK ANY QUESTION! "
+                        f"Wrap up warmly using this natural excuse: '{excuse}', say goodbye, and exit! "
+                        "The bot will power off right after this turn.]"
+                    )
+                )
+            except Exception as exc:
+                logger.warning("Time-limit wrap-up reply failed: %s", exc)
+        # Safety net: whether or not she managed to speak, she must be gone one minute later.
+        await asyncio.sleep(60.0)
+        if not sign_off_state["turned_off"]:
+            sign_off_state["turned_off"] = True
+            sign_off_state["in_progress"] = False
+            await turn_off_bot("time_limit_exit")
+
+    max_session_task = asyncio.create_task(max_session_watcher())
+
     async def on_shutdown() -> None:
         watcher_task.cancel()
+        max_session_task.cancel()
         greeting_task.cancel()
         await session.aclose()
         await realtime_model.aclose()

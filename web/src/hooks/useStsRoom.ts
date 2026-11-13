@@ -79,6 +79,9 @@ export function useStsRoom() {
   // Pillar 2 & 3: Simran stage handover and coins reward states
   const [isSimranAway, setIsSimranAway] = useState(false);
   const [simranAwayReason, setSimranAwayReason] = useState<string | null>(null);
+  // True once Simran has fully powered off (her last words are finished). The WebView page waits for this
+  // before closing, so the user never gets cut off mid-sentence.
+  const [botTurnedOff, setBotTurnedOff] = useState(false);
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsAwardedEvent, setCoinsAwardedEvent] = useState<CoinsAwardedEvent | null>(null);
   const [laughEnabled, setLaughEnabled] = useState<boolean>(() => {
@@ -124,6 +127,7 @@ export function useStsRoom() {
     setAudioLevel(0);
     setIsSimranAway(false);
     setSimranAwayReason(null);
+    setBotTurnedOff(false);
     setCoinsAwardedEvent(null);
     hasTriggeredVoiceCoinsRef.current = false;
     setNavigatedDuetRoom(null);
@@ -230,6 +234,7 @@ export function useStsRoom() {
               }
             } else if (msg.type === 'roxstar.bot_turned_off') {
               console.log('Bot turned off, onboarding complete:', msg.reason);
+              setBotTurnedOff(true);
               setSimranState('idle');
               setIsSimranAway(true);
               if (msg.reason) {
@@ -522,6 +527,7 @@ export function useStsRoom() {
     isSimranAway,
     isSaaraAway: isSimranAway,
     simranAwayReason,
+    botTurnedOff,
     saaraAwayReason: simranAwayReason,
     coinBalance,
     coinsAwardedEvent,

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH)
 
 STS_AGENT_NAME = os.getenv("STS_AGENT_NAME", "sts-simran").strip()
 STS_MODEL = os.getenv("STS_MODEL", "gemini-3.8-live").strip()
@@ -58,7 +60,7 @@ class StsSettings:
 
     @classmethod
     def load(cls) -> StsSettings:
-        load_dotenv()
+        load_dotenv(dotenv_path=_ENV_PATH)
         url = os.getenv("LIVEKIT_URL", "").strip()
         key = os.getenv("LIVEKIT_API_KEY", "").strip()
         secret = os.getenv("LIVEKIT_API_SECRET", "").strip()

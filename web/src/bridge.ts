@@ -167,10 +167,18 @@ function receive(raw: unknown): void {
 let wired = false;
 /** Hook up the two ways the app can reach the page. Safe to call more than once. */
 export function initBridge(): void {
+  closeSent = false;
   if (wired) return;
   wired = true;
   window.__simranReceive = receive;
   window.addEventListener('message', (ev) => receive(ev.data));
+}
+
+/** Reset bridge state (useful when opening Simran again in dev/simulator). */
+export function resetBridgeState(): void {
+  auth.token = null;
+  auth.name = null;
+  closeSent = false;
 }
 
 /** For tests only: forget everything. */

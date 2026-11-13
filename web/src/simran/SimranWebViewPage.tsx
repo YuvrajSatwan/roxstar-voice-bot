@@ -118,7 +118,7 @@ export function SimranWebViewPage(): React.ReactElement {
     let alive = true;
     void waitForAuthToken(AUTH_WAIT_MS).then((token) => {
       if (!alive) return;
-      if (token) {
+      if (token || import.meta.env.DEV) {
         setPhase('ready');
       } else {
         setProblem({ reason: 'unauthorized', ...PROBLEMS.unauthorized });

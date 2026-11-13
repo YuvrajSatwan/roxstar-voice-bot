@@ -1,0 +1,1087 @@
+/* RoxStar User Flow Simulator CSS */
+
+.sim-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 10%, #1a1c2e 0%, #0d0e15 100%);
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.sim-header {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sim-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sim-badge-rox {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.08em;
+}
+
+.sim-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.sim-header-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+.sim-steps-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sim-step-pill {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.sim-step-pill:hover {
+  background: #334155;
+  color: #fff;
+}
+
+.sim-step-pill.active {
+  background: #6366f1;
+  border-color: #818cf8;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.sim-pill-unread {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+}
+
+.sim-nudge-btn {
+  margin-left: auto;
+  border-color: #f43f5e;
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.15);
+}
+
+.sim-nudge-btn:hover {
+  background: rgba(244, 63, 94, 0.3);
+  color: #fff;
+}
+
+/* Workspace layout */
+.sim-workspace {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Phone Mockup Frame */
+.sim-device {
+  flex-shrink: 0;
+}
+
+.sim-phone-shell {
+  width: 380px;
+  height: 720px;
+  background: #0f172a;
+  border-radius: 44px;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-phone-header {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 50;
+  background: transparent;
+}
+
+.sim-notch {
+  width: 110px;
+  height: 20px;
+  background: #000;
+  border-radius: 0 0 14px 14px;
+}
+
+.sim-status-icons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Screens */
+.sim-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* SCREEN 1: Signup */
+.sim-signup-screen {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+.sim-auth-hero {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.sim-logo-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.2rem;
+  box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4);
+}
+
+.sim-icon-glow {
+  color: #fff;
+}
+
+.sim-auth-hero h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.3rem;
+}
+
+.sim-auth-hero p {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.sim-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sim-label {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.sim-input {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.sim-input:focus {
+  border-color: #818cf8;
+}
+
+.sim-signup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.sim-btn {
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: transform 0.1s;
+}
+
+.sim-btn:active {
+  transform: scale(0.98);
+}
+
+.sim-btn-google {
+  background: #fff;
+  color: #0f172a;
+}
+
+.sim-btn-email {
+  background: #4f46e5;
+  color: #fff;
+}
+
+.sim-btn-guest {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+}
+
+.sim-auth-footer p {
+  font-size: 0.72rem;
+  color: #64748b;
+  text-align: center;
+  margin: 0;
+}
+
+/* SCREEN 2: Inbox */
+.sim-inbox-screen {
+  background: #090d16;
+}
+
+.sim-app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.25rem;
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
+}
+
+.sim-app-nav h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sim-badge-online {
+  font-size: 0.7rem;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.sim-chat-tabs {
+  display: flex;
+  background: #111827;
+  padding: 0 1.25rem 0.6rem;
+  gap: 1.2rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.sim-tab {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sim-tab.active {
+  color: #ec4899;
+  font-weight: 700;
+  border-bottom: 2px solid #ec4899;
+  padding-bottom: 0.3rem;
+}
+
+.sim-chat-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sim-chat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid #1e293b;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sim-chat-item:hover {
+  background: #1e293b;
+}
+
+.sim-chat-highlight {
+  background: rgba(236, 72, 153, 0.08);
+}
+
+.sim-avatar-wrapper {
+  position: relative;
+}
+
+.sim-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sim-avatar-simran {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
+}
+
+.sim-online-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #090d16;
+}
+
+.sim-chat-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sim-chat-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.sim-sender-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sim-bot-pill {
+  font-size: 0.65rem;
+  background: #ec4899;
+  color: #fff;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.sim-chat-time {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.sim-chat-snippet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sim-chat-snippet {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.sim-unread-bubble {
+  background: #ec4899;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sim-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0.6rem 0;
+  background: #111827;
+  border-top: 1px solid #1f2937;
+}
+
+.sim-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.sim-bar-item.active {
+  color: #ec4899;
+}
+
+.sim-icon-with-badge {
+  position: relative;
+}
+
+.sim-tiny-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+/* SCREEN 3: Chat Thread */
+.sim-thread-screen {
+  background: #0b0f19;
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #111827;
+  border-bottom: 1px solid #1f2937;
+}
+
+.sim-back-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+
+.sim-thread-title h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.sim-subtext {
+  font-size: 0.7rem;
+  color: #10b981;
+}
+
+.sim-message-history {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sim-timestamp-divider {
+  align-self: center;
+  font-size: 0.7rem;
+  color: #64748b;
+  background: #1e293b;
+  padding: 0.15rem 0.6rem;
+  border-radius: 9999px;
+  margin-bottom: 0.5rem;
+}
+
+.sim-bubble {
+  max-width: 80%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 16px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.sim-bubble-incoming {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+}
+
+.sim-bubble-incoming p {
+  margin: 0 0 0.2rem;
+}
+
+.sim-bubble-time {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  display: block;
+  text-align: right;
+}
+
+/* The Welcome Card inside Chat */
+.sim-welcome-card {
+  align-self: flex-start;
+  width: 90%;
+  border-radius: 16px;
+  background: #1e293b;
+  border: 1px solid #3b4261;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.sim-card-banner {
+  background: linear-gradient(135deg, #db2777, #7c3aed);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sim-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.sim-mic-pulse {
+  animation: pulseMic 1.5s infinite;
+}
+
+@keyframes pulseMic {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.sim-card-banner-text h5 {
+  margin: 0;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.sim-card-banner-text span {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sim-card-body {
+  padding: 0.9rem;
+}
+
+.sim-card-body p {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.sim-card-cta {
+  width: 100%;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.35);
+  transition: transform 0.1s;
+}
+
+.sim-card-cta:hover {
+  filter: brightness(1.1);
+}
+
+.sim-card-cta:active {
+  transform: scale(0.98);
+}
+
+.sim-thread-input-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: #111827;
+  border-top: 1px solid #1f2937;
+}
+
+.sim-fake-input {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 9999px;
+  padding: 0.5rem 0.9rem;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.sim-send-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #334155;
+  border: none;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SCREEN 4: WebView Container */
+.sim-webview-screen {
+  background: #000;
+  height: 100%;
+}
+
+.sim-webview-screen .sw-root {
+  height: 100%;
+  max-width: 100%;
+}
+
+/* Nudge Modal Popup */
+.sim-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 100;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sim-nudge-modal {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 24px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  max-width: 300px;
+}
+
+.sim-nudge-icon-ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.5);
+}
+
+.sim-nudge-modal h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  color: #fff;
+}
+
+.sim-nudge-modal p {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.sim-nudge-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sim-nudge-confirm {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.sim-nudge-cancel {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.4rem;
+}
+
+/* Right-side Inspector */
+.sim-inspector {
+  flex: 1;
+  max-width: 520px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  border-radius: 24px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sim-inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #818cf8;
+}
+
+.sim-inspector-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sim-event-list {
+  background: #0b0f19;
+  border: 1px solid #1e293b;
+  border-radius: 16px;
+  padding: 1rem;
+  min-height: 220px;
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sim-empty-log {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: auto;
+  text-align: center;
+}
+
+.sim-event-row {
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 0.45rem;
+}
+
+.sim-event-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  margin-bottom: 0.2rem;
+}
+
+.sim-event-time {
+  color: #64748b;
+}
+
+.sim-event-src {
+  font-weight: 700;
+}
+
+.sim-event-msg {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sim-tech-specs {
+  border-top: 1px solid #334155;
+  padding-top: 1rem;
+}
+
+.sim-tech-specs h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.sim-tech-specs ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sim-tech-specs code {
+  color: #ec4899;
+  background: rgba(236, 72, 153, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+/* Duet Stage & Solo Studio Styles */
+.sim-duet-screen, .sim-solo-screen {
+  background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-stage-header {
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sim-stage-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-stage-title-wrap h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sim-stage-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.sim-leave-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sim-leave-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.sim-duet-seats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.sim-duet-seat {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  position: relative;
+}
+
+.sim-seat-active {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+}
+
+.sim-seat-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.sim-seat-pulse {
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(236, 72, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+}
+
+.sim-seat-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.sim-seat-tag {
+  font-size: 0.7rem;
+  color: #a5b4fc;
+  margin-top: 0.2rem;
+}
+
+.sim-seat-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.sim-duet-bar {
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.sim-duet-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.sim-duet-action.mic-active {
+  color: #10b981;
+}
+
+/* Solo Studio */
+.sim-solo-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  align-items: center;
+  text-align: center;
+  justify-content: space-between;
+}
+
+.sim-lyrics-box {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 12px;
+  padding: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sim-lyrics-line {
+  margin: 0.4rem 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+.sim-lyrics-highlight {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f43f5e;
+  text-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+}
+
+.sim-solo-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.sim-record-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 4px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}

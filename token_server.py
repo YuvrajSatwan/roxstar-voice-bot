@@ -411,17 +411,32 @@ class StsTokenHandler(BaseHTTPRequestHandler):
             },
         )
 
+    def _drain_body(self) -> None:
+        """Read and discard a small request body before answering without using it.
+
+        If we reply while the body is still unread, the OS can reset the connection and the caller sees a
+        network error instead of our clean 404 / 401.
+        """
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if 0 < length <= 8192:
+                self.rfile.read(length)
+        except Exception:
+            pass
+
     def do_POST(self) -> None:  # noqa: N802
         if self.path.startswith("/api/admin"):
             self._handle_admin("POST")
             return
         if self.path not in ("/token", "/rooms"):
+            self._drain_body()
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found"})
             return
 
         # RoxStar mode: no anonymous room creation at all. /token (with a real login) is the only door in.
         if self.settings.is_roxstar_mode:
             if self.path == "/rooms":
+                self._drain_body()
                 self._send_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found"})
                 return
             try:

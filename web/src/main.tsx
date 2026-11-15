@@ -20,22 +20,26 @@ const isStudioRoute = path === '/studio';
 const isSimulatorRoute = path === '/simulator';
 const isSimranRoute = path === '' || path === '/simran';
 
+const pageContent = isAdminRoute ? (
+  <Suspense fallback={null}>
+    <AdminApp />
+  </Suspense>
+) : isSimulatorRoute ? (
+  <Suspense fallback={null}>
+    <RoxStarUserFlowSimulator />
+  </Suspense>
+) : isStudioRoute ? (
+  <App />
+) : (
+  <Suspense fallback={null}>
+    <SimranWebViewPage />
+  </Suspense>
+);
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {isAdminRoute ? (
-      <Suspense fallback={null}>
-        <AdminApp />
-      </Suspense>
-    ) : isSimulatorRoute ? (
-      <Suspense fallback={null}>
-        <RoxStarUserFlowSimulator />
-      </Suspense>
-    ) : isStudioRoute ? (
-      <App />
-    ) : (
-      <Suspense fallback={null}>
-        <SimranWebViewPage />
-      </Suspense>
-    )}
-  </React.StrictMode>,
+  isAdminRoute || isSimulatorRoute || isStudioRoute ? (
+    <React.StrictMode>{pageContent}</React.StrictMode>
+  ) : (
+    pageContent
+  ),
 );

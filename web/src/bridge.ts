@@ -125,6 +125,16 @@ export function getNativeName(): string {
   return '';
 }
 
+/** Desired room code if passed by the host app (e.g. sts-simran-<user_id>). */
+export function getRoom(): string {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('room') || params.get('room_id') || params.get('roomId');
+    if (r) return r.trim().toLowerCase();
+  } catch {}
+  return '';
+}
+
 /** Wait (up to timeoutMs) for the app to hand over the login token. Resolves null if it never does. */
 export function waitForAuthToken(timeoutMs: number): Promise<string | null> {
   const now = getAuthToken();

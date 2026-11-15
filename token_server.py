@@ -104,32 +104,6 @@ def _with_livekit(settings: StsSettings, work: Callable[[api.LiveKitAPI], Awaita
         return asyncio.run(run())
 
 
-async def ensure_room_and_dispatch(
-    lk_api: api.LiveKitAPI, *, room: str, agent_name: str
-) -> None:
-    """Ensure room exists and dispatch agent concurrently for minimum startup latency."""
-    async def create_room_task() -> None:
-        try:
-            logger.info("Ensuring room %s on LiveKit...", room)
-            await lk_api.room.create_room(
-                api.CreateRoomRequest(name=room, empty_timeout=300)
-            )
-        except Exception as exc:
-            logger.debug("Room creation notice: %s", exc)
-
-    async def dispatch_agent_task() -> None:
-        try:
-            logger.info("Dispatching agent '%s' to room '%s'...", agent_name, room)
-            await lk_api.agent_dispatch.create_dispatch(
-                api.CreateAgentDispatchRequest(agent_name=agent_name, room=room)
-            )
-        except Exception as exc:
-            logger.debug("Agent dispatch notice: %s", exc)
-
-    # Concurrently create room and dispatch agent in parallel (saving ~1-1.5s of round-trips)
-    await asyncio.gather(create_room_task(), dispatch_agent_task())
-
-
 def _dispatch_is_live(dispatch: Any) -> bool:
     """True if this agent dispatch still has (or is about to get) a running Simran.
 
@@ -145,6 +119,37 @@ def _dispatch_is_live(dispatch: Any) -> bool:
         return True  # ticket just created, no Simran assigned yet
     live = (api.JobStatus.JS_PENDING, api.JobStatus.JS_RUNNING)
     return any(job.state.status in live for job in jobs)
+
+
+async def ensure_room_and_dispatch(
+    lk_api: api.LiveKitAPI, *, room: str, agent_name: str
+) -> None:
+    """Ensure room exists and dispatch agent concurrently for minimum startup latency."""
+    async def create_room_task() -> None:
+        try:
+            logger.info("Ensuring room %s on LiveKit...", room)
+            await lk_api.room.create_room(
+                api.CreateRoomRequest(name=room, empty_timeout=300)
+            )
+        except Exception as exc:
+            logger.debug("Room creation notice: %s", exc)
+
+    async def dispatch_agent_task() -> None:
+        try:
+            # Check if an agent is already dispatched or working in this room
+            existing = await lk_api.agent_dispatch.list_dispatch(room_name=room)
+            if any(d.agent_name == agent_name and _dispatch_is_live(d) for d in existing):
+                logger.info("Agent '%s' already live/dispatched to room '%s', skipping duplicate dispatch", agent_name, room)
+                return
+            logger.info("Dispatching agent '%s' to room '%s'...", agent_name, room)
+            await lk_api.agent_dispatch.create_dispatch(
+                api.CreateAgentDispatchRequest(agent_name=agent_name, room=room)
+            )
+        except Exception as exc:
+            logger.debug("Agent dispatch notice: %s", exc)
+
+    # Concurrently create room and dispatch agent in parallel (saving ~1-1.5s of round-trips)
+    await asyncio.gather(create_room_task(), dispatch_agent_task())
 
 
 async def prepare_private_room(

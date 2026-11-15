@@ -18,6 +18,7 @@ import {
   closeSimran,
   getAuthToken,
   getNativeName,
+  getRoom,
   initBridge,
   onNativeMessage,
   waitForAuthToken,
@@ -102,6 +103,7 @@ export function SimranWebViewPage(): React.ReactElement {
   // Track handoff targets
   const handoffRef = useRef<{ duet: string | null; solo: string | null }>({ duet: null, solo: null });
   handoffRef.current = { duet: navigatedDuetRoom, solo: navigatedSoloRecording };
+  const hasConnectedRef = useRef(false);
 
   const hangUp = useCallback(
     (message: Parameters<typeof closeSimran>[0]) => {
@@ -111,17 +113,21 @@ export function SimranWebViewPage(): React.ReactElement {
     [disconnect],
   );
 
-  // 1) Bridge initialization & token handshake
+  // 1) Bridge initialization & token handshake (ensuring exactly ONE connection per page lifecycle)
   useEffect(() => {
     initBridge();
     announceReady();
+    if (hasConnectedRef.current) return;
+    hasConnectedRef.current = true;
+
     let alive = true;
+    const targetRoom = getRoom() || undefined;
 
     // Fast-path: Token already available synchronously via URL or injected globals
     const immediateToken = getAuthToken();
     if (immediateToken || import.meta.env.DEV) {
       setPhase('ready');
-      void connect(getNativeName() || 'Guest');
+      void connect(getNativeName() || 'Guest', targetRoom);
       return () => {
         alive = false;
       };
@@ -132,7 +138,7 @@ export function SimranWebViewPage(): React.ReactElement {
       if (!alive) return;
       if (token || import.meta.env.DEV) {
         setPhase('ready');
-        void connect(getNativeName() || 'Guest');
+        void connect(getNativeName() || 'Guest', targetRoom);
       } else {
         setProblem({ reason: 'unauthorized', ...PROBLEMS.unauthorized });
         setPhase('problem');

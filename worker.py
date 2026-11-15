@@ -820,7 +820,7 @@ def main() -> None:
             entrypoint_fnc=entrypoint,
             prewarm_fnc=prewarm,
             agent_name=settings.agent_name,
-            num_idle_processes=1,
+            num_idle_processes=2,
             load_threshold=float("inf"),
             job_executor_type=JobExecutorType.THREAD,
             initialize_process_timeout=60.0,

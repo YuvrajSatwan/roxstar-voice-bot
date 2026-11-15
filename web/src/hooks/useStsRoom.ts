@@ -96,12 +96,14 @@ export function useStsRoom() {
   const analyserCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const hasTriggeredVoiceCoinsRef = useRef(false);
+  const isConnectingRef = useRef(false);
 
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
 
   // Cleanup room and audio listeners
   const cleanup = useCallback(async () => {
+    isConnectingRef.current = false;
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -122,6 +124,16 @@ export function useStsRoom() {
       await roomRef.current.disconnect();
       roomRef.current = null;
     }
+    // Remove any lingering attached audio elements to prevent duplicate audio streams
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('audio').forEach((el) => {
+        try {
+          el.pause();
+          el.srcObject = null;
+          el.remove();
+        } catch {}
+      });
+    }
     setConnectionState(ConnectionState.Disconnected);
     setSimranState('idle');
     setAudioLevel(0);
@@ -136,6 +148,11 @@ export function useStsRoom() {
 
   const connect = useCallback(
     async (userName: string, targetRoom?: string) => {
+      if (isConnectingRef.current || roomRef.current?.state === ConnectionState.Connected) {
+        console.warn('Simran voice session already connecting or active, skipping duplicate connect');
+        return;
+      }
+      isConnectingRef.current = true;
       setError(null);
       await cleanup();
 
@@ -367,6 +384,8 @@ export function useStsRoom() {
         const msg = err instanceof Error ? err.message : 'Failed to join STS room.';
         setError(msg);
         setConnectionState(ConnectionState.Disconnected);
+      } finally {
+        isConnectingRef.current = false;
       }
     },
     [cleanup],

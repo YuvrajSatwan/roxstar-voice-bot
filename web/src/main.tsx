@@ -16,8 +16,9 @@ const RoxStarUserFlowSimulator = lazy(() =>
 
 const path = window.location.pathname.replace(/\/+$/, '');
 const isAdminRoute = path.startsWith('/admin');
-const isSimranRoute = path === '/simran';
 const isStudioRoute = path === '/studio';
+const isSimulatorRoute = path === '/simulator';
+const isSimranRoute = path === '' || path === '/simran';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -25,15 +26,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Suspense fallback={null}>
         <AdminApp />
       </Suspense>
-    ) : isSimranRoute ? (
+    ) : isSimulatorRoute ? (
       <Suspense fallback={null}>
-        <SimranWebViewPage />
+        <RoxStarUserFlowSimulator />
       </Suspense>
     ) : isStudioRoute ? (
       <App />
     ) : (
       <Suspense fallback={null}>
-        <RoxStarUserFlowSimulator />
+        <SimranWebViewPage />
       </Suspense>
     )}
   </React.StrictMode>,

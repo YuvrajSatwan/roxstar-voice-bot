@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, MicOff, PhoneOff } from 'lucide-react';
-import { useStsRoom } from '../hooks/useStsRoom';
-import { SpeakingOrb } from '../components/SpeakingOrb';
+import {
+  Mic,
+  MicOff,
+  Music2,
+  Gift,
+  Send,
+  LogOut,
+  Plus,
+  Eye,
+  Star,
+  Sparkles,
+  Volume2,
+} from 'lucide-react';
+import { useStsRoom, type TranscriptItem } from '../hooks/useStsRoom';
 import {
   announceReady,
   closeSimran,
@@ -12,36 +23,14 @@ import {
 } from '../bridge';
 import './simran-webview.css';
 
-/**
- * The page the RoxStar app opens inside a WebView ("Simran's Room").
- *
- * In simple words, the life of this page:
- *   1. Page loads        -> tells the app "I'm ready" and waits for the user's login token.
- *   2. User taps "Talk"  -> (a tap is needed so the phone allows sound and the microphone)
- *                           asks the server for a PRIVATE voice room and joins it. Simran says hello.
- *   3. They chat         -> Simran learns their taste and invites them to sing.
- *   4. Handoff           -> Simran says goodbye and powers off. THEN this page tells the app
- *                           "close me and open duet room X" (or the solo studio).
- *   5. Anything goes wrong (busy, no mic, no login...) -> a friendly message, then the page asks
- *                           the app to close and go back to the chat. The user is never left stuck.
- *
- * It looks like a RoxStar party room, but there is NO real party room behind it.
- * Every user gets their own private session, so nobody ever waits for Simran.
- */
-
-/** How long the app may stay in the background before we hang up (Gemini + LiveKit minutes cost money). */
 const BACKGROUND_GRACE_MS = 30_000;
-/** If Simran's "I'm off the mic" signal never arrives after a handoff, close anyway after this long. */
 const HANDOFF_FALLBACK_MS = 20_000;
-/** After Simran powers off with no handoff, wait a moment so the user can hear her last words land. */
 const END_GRACE_MS = 1_500;
-/** How long to wait for the app to hand over the login token. */
 const AUTH_WAIT_MS = 4_000;
 
 type Phase = 'waiting-auth' | 'ready' | 'connecting' | 'live' | 'problem';
 
 interface Problem {
-  /** Sent to the app as `reason`. */
   reason: 'busy' | 'rate_limited' | 'unauthorized' | 'mic_denied' | 'error';
   title: string;
   message: string;
@@ -49,28 +38,27 @@ interface Problem {
 
 const PROBLEMS: Record<Problem['reason'], Omit<Problem, 'reason'>> = {
   busy: {
-    title: 'Simran abhi thodi busy hai',
-    message: 'Bahut saare log baat kar rahe hain. 2 minute baad dobara try karo!',
+    title: 'Simran abhi busy hai',
+    message: 'Bahut saare log party room mein hain. Thodi der baad dobara aana!',
   },
   rate_limited: {
-    title: 'Aaj ke liye bahut ho gaya',
-    message: 'Aap kai baar try kar chuke ho. Thodi der baad phir milte hain!',
+    title: 'Thodi der baad milte hain',
+    message: 'Aap kai baar join kar chuke ho. Thodi der rest leke phir aana!',
   },
   unauthorized: {
     title: 'Login check nahi ho paya',
-    message: 'App ko ek baar band karke dobara kholo, phir try karo.',
+    message: 'App ko ek baar band karke dobara open karo.',
   },
   mic_denied: {
-    title: 'Mic ki permission chahiye',
-    message: 'Simran se baat karne ke liye app settings mein microphone allow karo.',
+    title: 'Microphone permission chahiye',
+    message: 'Simran ke saath gaane ke liye app settings mein mic allow karo.',
   },
   error: {
-    title: 'Kuch gadbad ho gayi',
-    message: 'Connection nahi ho paya. Thodi der baad phir try karo.',
+    title: 'Connection disconnect ho gaya',
+    message: 'Live room connect nahi ho paya. Dobara try karo!',
   },
 };
 
-/** Turn whatever went wrong into one of our friendly problems. */
 function classifyProblem(message: string): Problem['reason'] {
   const m = message.toLowerCase();
   if (m === 'busy') return 'busy';
@@ -83,9 +71,15 @@ function classifyProblem(message: string): Problem['reason'] {
 export function SimranWebViewPage(): React.ReactElement {
   const [phase, setPhase] = useState<Phase>('waiting-auth');
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [showGiftToast, setShowGiftToast] = useState(false);
+  const [viewersCount, setViewersCount] = useState(48);
+
+  const commentsEndRef = useRef<HTMLDivElement | null>(null);
 
   const {
     isConnected,
+    isConnecting,
     isMuted,
     simranState,
     audioLevel,
@@ -94,24 +88,29 @@ export function SimranWebViewPage(): React.ReactElement {
     navigatedDuetRoom,
     navigatedSoloRecording,
     botTurnedOff,
+    coinBalance,
     connect,
     disconnect,
     toggleMute,
+    sendTextTurn,
+    triggerCoinsPopup,
   } = useStsRoom();
 
-  // Latest values for timers that fire later (so they never read stale data).
+  const userName = useMemo(() => getNativeName() || 'Guest', []);
+
+  // Track handoff targets
   const handoffRef = useRef<{ duet: string | null; solo: string | null }>({ duet: null, solo: null });
   handoffRef.current = { duet: navigatedDuetRoom, solo: navigatedSoloRecording };
 
   const hangUp = useCallback(
     (message: Parameters<typeof closeSimran>[0]) => {
-      void disconnect(); // always leave the voice room first
-      closeSimran(message); // then ask the app to close this page (only the first call counts)
+      void disconnect();
+      closeSimran(message);
     },
     [disconnect],
   );
 
-  // 1) On load: connect the bridge, tell the app we're ready, wait for the login token.
+  // 1) Bridge initialization & token handshake
   useEffect(() => {
     initBridge();
     announceReady();
@@ -120,6 +119,8 @@ export function SimranWebViewPage(): React.ReactElement {
       if (!alive) return;
       if (token || import.meta.env.DEV) {
         setPhase('ready');
+        // Auto-connect as soon as user opens room
+        void connect(getNativeName() || 'Guest');
       } else {
         setProblem({ reason: 'unauthorized', ...PROBLEMS.unauthorized });
         setPhase('problem');
@@ -128,14 +129,15 @@ export function SimranWebViewPage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [connect]);
 
-  // 2) Track the voice connection: connecting -> live.
+  // 2) Live status tracking
   useEffect(() => {
-    if (isConnected && phase === 'connecting') setPhase('live');
-  }, [isConnected, phase]);
+    if (isConnected) setPhase('live');
+    else if (isConnecting) setPhase('connecting');
+  }, [isConnected, isConnecting]);
 
-  // 3) Something failed while connecting or during the chat -> friendly message.
+  // 3) Error classified cleanly without AI keywords
   useEffect(() => {
     if (!error || phase === 'problem') return;
     const reason = classifyProblem(error);
@@ -144,8 +146,7 @@ export function SimranWebViewPage(): React.ReactElement {
     setPhase('problem');
   }, [error, phase, disconnect]);
 
-  // 4) Handoff: Simran sent the user to a duet room or the solo studio.
-  //    Wait until she has finished speaking and powered off, so nothing is cut off mid-sentence.
+  // 4) Handoff transition
   const handoffTarget = navigatedDuetRoom ? 'duet' : navigatedSoloRecording ? 'solo' : null;
   useEffect(() => {
     if (!handoffTarget) return;
@@ -162,16 +163,18 @@ export function SimranWebViewPage(): React.ReactElement {
     return () => window.clearTimeout(fallback);
   }, [handoffTarget, botTurnedOff, hangUp]);
 
-  // 5) Simran powered off WITHOUT a handoff (user declined twice, or the time limit was reached).
+  // 5) Clean shutdown when session ends naturally
   useEffect(() => {
     if (!botTurnedOff || handoffTarget) return;
     const t = window.setTimeout(() => {
-      if (!handoffRef.current.duet && !handoffRef.current.solo) hangUp({ destination: 'none', reason: 'ended' });
+      if (!handoffRef.current.duet && !handoffRef.current.solo) {
+        hangUp({ destination: 'none', reason: 'ended' });
+      }
     }, END_GRACE_MS);
     return () => window.clearTimeout(t);
   }, [botTurnedOff, handoffTarget, hangUp]);
 
-  // 6) App minimised or screen locked for too long -> hang up so we stop paying for an empty call.
+  // 6) App background grace timer
   useEffect(() => {
     let timer: number | undefined;
     const away = () => {
@@ -200,89 +203,357 @@ export function SimranWebViewPage(): React.ReactElement {
     };
   }, [hangUp, disconnect]);
 
-  const start = () => {
-    setPhase('connecting');
-    void connect(getNativeName() || 'Friend');
-  };
-
-  // The last thing Simran said, shown as a caption (helps in noisy places, and for accessibility).
-  const caption = useMemo(() => {
-    for (let i = transcripts.length - 1; i >= 0; i--) {
-      if (transcripts[i].speaker === 'Simran') return transcripts[i].text;
-    }
-    return null;
+  // 7) Scroll live comments feed smoothly
+  useEffect(() => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts]);
 
-  const orbState = simranState === 'idle' && phase === 'live' ? 'listening' : simranState;
+  // Slight random drift for live viewers to feel organic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViewersCount((prev) => Math.max(38, Math.min(65, prev + (Math.random() > 0.5 ? 1 : -1))));
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    void sendTextTurn(inputText.trim());
+    setInputText('');
+  };
+
+  const handleSendGift = () => {
+    triggerCoinsPopup(50, 'Welcome Reward Claimed');
+    setShowGiftToast(true);
+    setTimeout(() => setShowGiftToast(false), 3500);
+  };
+
+  const isSimranSpeaking = simranState === 'speaking';
+  const rippleScale = isSimranSpeaking ? 1 + Math.min(audioLevel * 0.9, 0.45) : 1;
 
   return (
-    <main className="sw-root">
-      <header className="sw-top">
-        <span className="sw-live-dot" aria-hidden="true" />
-        <span className="sw-title">Simran&apos;s Room</span>
-        <button
-          type="button"
-          className="sw-close"
-          onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
-          aria-label="Close"
-        >
-          ✕
-        </button>
-      </header>
-
-      <section className="sw-stage" aria-live="polite">
-        {/* Host chair: Simran */}
-        <div className="sw-seat sw-seat-host">
-          <div className="sw-orb">
-            <SpeakingOrb state={orbState} audioLevel={audioLevel} size="lg" />
+    <div className="roxstar-room-container">
+      {/* ── TOP ROOM HEADER (Exact RoxStar sing_room header) ── */}
+      <header className="roxstar-room-header">
+        <div className="header-room-info">
+          <div className="header-level-badge">
+            <span className="level-number">1</span>
           </div>
-          <div className="sw-name">Simran</div>
-          <div className="sw-role">Host</div>
+          <div className="header-room-meta">
+            <span className="room-name">Simran&apos;s Live Room 🎤</span>
+            <span className="room-id">ID: 990835</span>
+          </div>
         </div>
 
-        {phase === 'live' && caption && <p className="sw-caption">{caption}</p>}
-
-        {phase === 'waiting-auth' && <p className="sw-hint">Ek second…</p>}
-
-        {phase === 'ready' && (
-          <div className="sw-card">
-            <h1>Simran se milo 👋</h1>
-            <p>Bas baat karo. Wo aapko RoxStar dikhayegi aur sahi duet dhoondhne mein help karegi.</p>
-            <button type="button" className="sw-primary" onClick={start}>
-              <Mic size={18} aria-hidden="true" /> Talk to Simran
-            </button>
-            <p className="sw-fine">Microphone ki permission maangi jayegi.</p>
+        <div className="header-right-actions">
+          {/* Star Count */}
+          <div className="header-pill header-star-pill">
+            <Star size={11} className="star-icon" />
+            <span>12.5k</span>
           </div>
-        )}
 
-        {phase === 'connecting' && <p className="sw-hint">Simran ko bula rahe hain…</p>}
-
-        {phase === 'problem' && problem && (
-          <div className="sw-card" role="alert">
-            <h1>{problem.title}</h1>
-            <p>{problem.message}</p>
-            <button type="button" className="sw-primary" onClick={() => hangUp({ destination: 'none', reason: problem.reason })}>
-              Theek hai
-            </button>
+          {/* Viewers Count */}
+          <div className="header-pill header-viewers-pill">
+            <Eye size={12} className="eye-icon" />
+            <span>{viewersCount}</span>
           </div>
-        )}
-      </section>
 
-      {phase === 'live' && (
-        <footer className="sw-bottom">
-          <button type="button" className="sw-round" onClick={() => void toggleMute()} aria-label={isMuted ? 'Unmute' : 'Mute'}>
-            {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-          </button>
+          {/* Leave Button */}
           <button
             type="button"
-            className="sw-round sw-end"
+            className="header-exit-btn"
             onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
-            aria-label="End chat"
+            aria-label="Exit Party Room"
           >
-            <PhoneOff size={22} />
+            ✕
           </button>
-        </footer>
+        </div>
+      </header>
+
+      {/* ── SUB-BAR: DAILY EXP PROGRESS ── */}
+      <div className="roxstar-sub-bar">
+        <div className="exp-meta">
+          <span className="exp-label">Daily Room EXP</span>
+          <span className="exp-value">650 / 1500</span>
+        </div>
+        <div className="exp-progress-track">
+          <div className="exp-progress-fill" style={{ width: '43%' }} />
+        </div>
+      </div>
+
+      {/* ── MAIN STAGE AREA: 8 SEATS CONCERT GRID ── */}
+      <main className="roxstar-stage-grid">
+        {/* ROW 1: Seat 1 (Simran Host), Seat 2 (You), Seat 3, Seat 4 */}
+        <div className="stage-row stage-row--primary">
+          {/* Seat 1: Simran (Host) */}
+          <div className="stage-seat stage-seat--host">
+            <div className="seat-avatar-wrapper">
+              {/* Dynamic Ripple Indicator (RoxStar DuetSpeakingIndicatorView) */}
+              <div
+                className={`speaking-ripple-container ${isSimranSpeaking ? 'speaking-ripple-container--active' : ''}`}
+                style={{ transform: `scale(${rippleScale})` }}
+              >
+                <div className="ripple-ring ring-1" />
+                <div className="ripple-ring ring-2" />
+                <div className="ripple-ring ring-3" />
+              </div>
+
+              {/* Host Avatar */}
+              <div className="seat-avatar host-avatar">
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+                  alt="Simran"
+                  className="avatar-img"
+                  onError={(e) => {
+                    // Fallback to elegant gradient avatar if offline
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div className="avatar-fallback-initial">S</div>
+              </div>
+
+              {/* Green Active Mic Status Badge */}
+              <div className="seat-mic-status seat-mic-status--active">
+                <Volume2 size={10} />
+              </div>
+            </div>
+
+            <div className="seat-info">
+              <span className="seat-host-badge">👑 Host</span>
+              <span className="seat-user-name">Simran</span>
+              <span className="seat-stars">⭐ 3.8k</span>
+            </div>
+          </div>
+
+          {/* Seat 2: You (Guest) */}
+          <div className="stage-seat stage-seat--user">
+            <div className="seat-avatar-wrapper">
+              <div className="seat-avatar user-avatar">
+                <div className="avatar-user-initial">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              </div>
+
+              {/* User Mic Status Badge */}
+              <div className={`seat-mic-status ${isMuted ? 'seat-mic-status--muted' : 'seat-mic-status--active'}`}>
+                {isMuted ? <MicOff size={10} /> : <Mic size={10} />}
+              </div>
+            </div>
+
+            <div className="seat-info">
+              <span className="seat-user-badge">You</span>
+              <span className="seat-user-name">{userName}</span>
+              <span className="seat-stars">⭐ 50</span>
+            </div>
+          </div>
+
+          {/* Seat 3: Empty Seat */}
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 3</span>
+          </div>
+
+          {/* Seat 4: Empty Seat */}
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 4</span>
+          </div>
+        </div>
+
+        {/* ROW 2: Seats 5, 6, 7, 8 */}
+        <div className="stage-row stage-row--secondary">
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 5</span>
+          </div>
+
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 6</span>
+          </div>
+
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 7</span>
+          </div>
+
+          <div className="stage-seat stage-seat--empty">
+            <div className="seat-avatar-wrapper empty-seat-circle">
+              <Plus size={16} className="plus-icon" />
+            </div>
+            <span className="seat-empty-label">Seat 8</span>
+          </div>
+        </div>
+      </main>
+
+      {/* ── LIVE SINGING QUEUE BANNER ── */}
+      <div className="roxstar-queue-banner">
+        <div className="queue-banner-left">
+          <div className="queue-music-icon">
+            <Music2 size={15} />
+          </div>
+          <div className="queue-banner-meta">
+            <span className="queue-banner-title">Live Queue (1 Song)</span>
+            <span className="queue-banner-subtitle">
+              {handoffRef.current.solo || 'Diljit Dosanjh - Lover'}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="queue-sing-btn"
+          onClick={() => {
+            void sendTextTurn('Hey Simran! Lets sing a duet together!');
+          }}
+        >
+          SING
+        </button>
+      </div>
+
+      {/* ── FLOATING LIVE COMMENTS FEED (Auto-scrolling over stage) ── */}
+      <section className="roxstar-comments-container">
+        {/* System Announcements */}
+        <div className="comment-bubble comment-bubble--system">
+          <span className="system-pill-badge">Notice</span>
+          <span>Welcome to RoxStar! Feel free to talk and sing with Simran.</span>
+        </div>
+
+        <div className="comment-bubble comment-bubble--reward">
+          <Sparkles size={13} className="reward-sparkle" />
+          <span>🎁 50 Welcome Coins added to your wallet!</span>
+        </div>
+
+        {/* Live Conversation Stream as Chat Messages */}
+        {transcripts.map((item: TranscriptItem) => {
+          const isSimran = item.speaker === 'Simran' || item.speaker === 'Saraah';
+          if (item.speaker === 'System') return null;
+
+          return (
+            <div
+              key={item.id}
+              className={`comment-bubble ${isSimran ? 'comment-bubble--host' : 'comment-bubble--user'}`}
+            >
+              <span className={`comment-sender ${isSimran ? 'comment-sender--host' : 'comment-sender--user'}`}>
+                {isSimran ? '👑 Simran' : userName}:
+              </span>
+              <span className="comment-text">{item.text}</span>
+            </div>
+          );
+        })}
+
+        <div ref={commentsEndRef} />
+      </section>
+
+      {/* ── GIFT REWARD CELEBRATION TOAST ── */}
+      {showGiftToast && (
+        <div className="gift-celebration-toast">
+          <Gift size={20} className="gift-toast-icon" />
+          <div className="gift-toast-text">
+            <strong>Welcome Bonus!</strong>
+            <span>Claimed 50 RoxStar coins for your party room singing.</span>
+          </div>
+        </div>
       )}
-    </main>
+
+      {/* ── CONNECTING / PROBLEM OVERLAYS ── */}
+      {phase === 'connecting' && (
+        <div className="roxstar-connecting-banner">
+          <div className="connecting-pulse" />
+          <span>Joining Simran&apos;s Party Room…</span>
+        </div>
+      )}
+
+      {phase === 'problem' && problem && (
+        <div className="roxstar-modal-scrim">
+          <div className="roxstar-modal-card">
+            <h3>{problem.title}</h3>
+            <p>{problem.message}</p>
+            <button
+              type="button"
+              className="modal-action-btn"
+              onClick={() => hangUp({ destination: 'none', reason: problem.reason })}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── BOTTOM CONTROL BAR (Exact RoxStar Party Room Actions) ── */}
+      <footer className="roxstar-bottom-bar">
+        {/* Text Comment Input Form */}
+        <form onSubmit={handleSendComment} className="bottom-input-pill">
+          <input
+            type="text"
+            placeholder="Let's talk..."
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            disabled={!isConnected}
+            className="bottom-text-input"
+          />
+          <button type="submit" className="bottom-send-btn" disabled={!inputText.trim()}>
+            <Send size={15} />
+          </button>
+        </form>
+
+        {/* Action Buttons: Mic, Song, Gift, Exit */}
+        <div className="bottom-action-buttons">
+          {/* Mic Toggle Button */}
+          <button
+            type="button"
+            className={`action-circle-btn ${isMuted ? 'action-circle-btn--muted' : 'action-circle-btn--mic-on'}`}
+            onClick={() => void toggleMute()}
+            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+          >
+            {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+          </button>
+
+          {/* Song Request Button */}
+          <button
+            type="button"
+            className="action-circle-btn action-circle-btn--music"
+            onClick={() => {
+              void sendTextTurn('Simran, can we sing Diljit Dosanjh - Lover?');
+            }}
+            title="Request Song"
+          >
+            <Music2 size={18} />
+          </button>
+
+          {/* Gift Box Button */}
+          <button
+            type="button"
+            className="action-circle-btn action-circle-btn--gift"
+            onClick={handleSendGift}
+            title="Claim or send 50 coins gift"
+          >
+            <Gift size={18} />
+            <span className="gift-badge-coin">{coinBalance > 0 ? coinBalance : 50}</span>
+          </button>
+
+          {/* Leave Room Button */}
+          <button
+            type="button"
+            className="action-circle-btn action-circle-btn--leave"
+            onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
+            title="Leave party room"
+          >
+            <LogOut size={17} />
+          </button>
+        </div>
+      </footer>
+    </div>
   );
 }

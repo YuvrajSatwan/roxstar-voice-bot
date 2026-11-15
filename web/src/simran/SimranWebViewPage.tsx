@@ -241,7 +241,7 @@ export function SimranWebViewPage(): React.ReactElement {
             <span className="level-number">1</span>
           </div>
           <div className="header-room-meta">
-            <span className="room-name">Simran&apos;s Live Room 🎤</span>
+            <span className="room-name">Simran&apos;s Party Room 🎤</span>
             <span className="room-id">ID: 990835</span>
           </div>
         </div>
@@ -320,7 +320,7 @@ export function SimranWebViewPage(): React.ReactElement {
             </div>
 
             <div className="seat-info">
-              <span className="seat-host-badge">👑 Host</span>
+              <span className="seat-host-badge">Lv.5 🎤</span>
               <span className="seat-user-name">Simran</span>
               <span className="seat-stars">⭐ 3.8k</span>
             </div>
@@ -427,7 +427,7 @@ export function SimranWebViewPage(): React.ReactElement {
         {/* System Announcements */}
         <div className="comment-bubble comment-bubble--system">
           <span className="system-pill-badge">Notice</span>
-          <span>Welcome to RoxStar! Feel free to talk and sing with Simran.</span>
+          <span>Welcome to Simran&apos;s Room! Feel free to talk and sing together.</span>
         </div>
 
         <div className="comment-bubble comment-bubble--reward">
@@ -446,7 +446,7 @@ export function SimranWebViewPage(): React.ReactElement {
               className={`comment-bubble ${isSimran ? 'comment-bubble--host' : 'comment-bubble--user'}`}
             >
               <span className={`comment-sender ${isSimran ? 'comment-sender--host' : 'comment-sender--user'}`}>
-                {isSimran ? '👑 Simran' : userName}:
+                {isSimran ? 'Simran' : userName}:
               </span>
               <span className="comment-text">{item.text}</span>
             </div>

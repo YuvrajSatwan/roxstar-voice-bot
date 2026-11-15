@@ -97,21 +97,32 @@ export function getAuthToken(): string | null {
     auth.name = window.__ROXSTAR_AUTH__?.name ?? auth.name;
     return auth.token;
   }
-  // Developer convenience only. `import.meta.env.DEV` is false in production builds, so this whole
-  // branch is removed from what real users download.
-  if (import.meta.env.DEV) {
-    const dev = new URLSearchParams(window.location.search).get('dev_token');
-    if (dev) {
-      auth.token = dev;
-      return dev;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token') || params.get('dev_token') || params.get('accessToken');
+    const urlName = params.get('name') || params.get('user_name');
+    if (urlToken) {
+      auth.token = urlToken;
+      if (urlName) auth.name = urlName;
+      return urlToken;
     }
-  }
+  } catch {}
   return null;
 }
 
 /** Display name from the app, if it sent one. Display only: never used to decide who the user is. */
 export function getNativeName(): string {
-  return auth.name || window.__ROXSTAR_AUTH__?.name || '';
+  if (auth.name) return auth.name;
+  if (window.__ROXSTAR_AUTH__?.name) return window.__ROXSTAR_AUTH__.name;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlName = params.get('name') || params.get('user_name');
+    if (urlName) {
+      auth.name = urlName;
+      return urlName;
+    }
+  } catch {}
+  return '';
 }
 
 /** Wait (up to timeoutMs) for the app to hand over the login token. Resolves null if it never does. */

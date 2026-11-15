@@ -16,6 +16,7 @@ import { useStsRoom, type TranscriptItem } from '../hooks/useStsRoom';
 import {
   announceReady,
   closeSimran,
+  getAuthToken,
   getNativeName,
   initBridge,
   onNativeMessage,
@@ -26,7 +27,7 @@ import './simran-webview.css';
 const BACKGROUND_GRACE_MS = 30_000;
 const HANDOFF_FALLBACK_MS = 20_000;
 const END_GRACE_MS = 1_500;
-const AUTH_WAIT_MS = 4_000;
+const AUTH_WAIT_MS = 200;
 
 type Phase = 'waiting-auth' | 'ready' | 'connecting' | 'live' | 'problem';
 
@@ -115,11 +116,22 @@ export function SimranWebViewPage(): React.ReactElement {
     initBridge();
     announceReady();
     let alive = true;
+
+    // Fast-path: Token already available synchronously via URL or injected globals
+    const immediateToken = getAuthToken();
+    if (immediateToken || import.meta.env.DEV) {
+      setPhase('ready');
+      void connect(getNativeName() || 'Guest');
+      return () => {
+        alive = false;
+      };
+    }
+
+    // Fallback: Wait briefly for native bridge handshake
     void waitForAuthToken(AUTH_WAIT_MS).then((token) => {
       if (!alive) return;
       if (token || import.meta.env.DEV) {
         setPhase('ready');
-        // Auto-connect as soon as user opens room
         void connect(getNativeName() || 'Guest');
       } else {
         setProblem({ reason: 'unauthorized', ...PROBLEMS.unauthorized });

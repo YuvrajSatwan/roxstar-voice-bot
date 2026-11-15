@@ -2,14 +2,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Mic,
   MicOff,
-  Music2,
-  Gift,
+  Music,
   Send,
-  LogOut,
-  Plus,
   Eye,
   Star,
-  Sparkles,
+  Megaphone,
+  Share2,
+  Power,
+  Hand,
+  Menu,
+  ChevronRight,
   Volume2,
 } from 'lucide-react';
 import { useStsRoom, type TranscriptItem } from '../hooks/useStsRoom';
@@ -70,12 +72,93 @@ function classifyProblem(message: string): Problem['reason'] {
   return 'error';
 }
 
+/**
+ * Exact vector representation of RoxStar's ic_sofa_icon.xml (33x33 viewport)
+ */
+function SofaIcon({ className = '' }: { className?: string }): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 33 33"
+      width="24"
+      height="24"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient id="sofaGrad" x1="16.5" y1="0" x2="16.5" y2="33" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#E6E6E6" />
+          <stop offset="100%" stopColor="#999999" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M24.063 20.25H8.938C7.904 20.25 7.063 21.091 7.063 22.125V24C7.063 25.034 7.904 25.875 8.938 25.875H24.063C25.096 25.875 25.938 25.034 25.938 24V22.125C25.938 21.091 25.096 20.25 24.063 20.25Z"
+        fill="url(#sofaGrad)"
+      />
+      <path
+        d="M0.5 16.162C0.5 16.386 0.523 16.612 0.566 16.831L1.827 23.132C2.144 24.721 3.551 25.875 5.172 25.875H5.709C5.386 25.321 5.188 24.686 5.188 24V22.125C5.188 20.382 6.387 18.927 8 18.508V16.162C8 14.281 6.469 12.75 4.588 12.75H3.912C2.031 12.75 0.5 14.281 0.5 16.162Z"
+        fill="url(#sofaGrad)"
+      />
+      <path
+        d="M29.088 12.75H28.412C26.531 12.75 25 14.281 25 16.162V18.508C26.613 18.927 27.813 20.382 27.813 22.125V24C27.813 24.686 27.614 25.321 27.291 25.875H27.828C29.449 25.875 30.856 24.721 31.173 23.132L32.434 16.831C32.477 16.612 32.5 16.386 32.5 16.162C32.5 14.281 30.969 12.75 29.088 12.75Z"
+        fill="url(#sofaGrad)"
+      />
+      <path
+        d="M6.125 28.688C6.125 29.206 6.544 29.625 7.063 29.625C7.581 29.625 8 29.206 8 28.688V27.75H6.125V28.688Z"
+        fill="url(#sofaGrad)"
+      />
+      <path
+        d="M25 28.688C25 29.206 25.419 29.625 25.938 29.625C26.456 29.625 26.875 29.206 26.875 28.688V27.75H25V28.688Z"
+        fill="url(#sofaGrad)"
+      />
+      <path
+        d="M4.25 10.875H4.588C7.503 10.875 9.875 13.247 9.875 16.162V18.375H23.125V16.162C23.125 13.247 25.497 10.875 28.412 10.875H28.75V8.063C28.75 5.478 26.647 3.375 24.063 3.375H8.938C6.353 3.375 4.25 5.478 4.25 8.063V10.875ZM20.313 7.125C20.83 7.125 21.25 7.545 21.25 8.063C21.25 8.58 20.83 9 20.313 9C19.795 9 19.375 8.58 19.375 8.063C19.375 7.545 19.795 7.125 20.313 7.125ZM20.313 12.75C20.83 12.75 21.25 13.17 21.25 13.688C21.25 14.205 20.83 14.625 20.313 14.625C19.795 14.625 19.375 14.205 19.375 13.688C19.375 13.17 19.795 12.75 20.313 12.75ZM12.688 7.125C13.205 7.125 13.625 7.545 13.625 8.063C13.625 8.58 13.205 9 12.688 9C12.17 9 11.75 8.58 11.75 8.063C11.75 7.545 12.17 7.125 12.688 7.125ZM12.688 12.75C13.205 12.75 13.625 13.17 13.625 13.688C13.625 14.205 13.205 14.625 12.688 14.625C12.17 14.625 11.75 14.205 11.75 13.688C11.75 13.17 12.17 12.75 12.688 12.75Z"
+        fill="url(#sofaGrad)"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Exact vector representation of RoxStar's ic_gift_room.xml
+ */
+function GiftRoomIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 21 21" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M19.398 8.944L19.274 10.686L18.963 15.913C18.901 16.784 18.341 17.593 17.532 17.904C11.123 20.393 11.309 20.393 11.061 20.455C10.75 20.517 10.376 20.517 10.003 20.455C9.692 20.393 9.941 20.455 3.532 17.904C2.723 17.593 2.163 16.784 2.101 15.913L1.789 10.686L1.665 8.944L10.501 11.744L19.398 8.944Z"
+        fill="#F45170"
+      />
+      <path
+        d="M10.998 12.864V20.393C10.687 20.455 10.314 20.455 9.941 20.393V12.864C10.314 13.05 10.687 13.05 10.998 12.864Z"
+        fill="#FA5F7F"
+      />
+      <path
+        d="M1.603 8.944L1.727 10.686L10.003 14.233C10.314 14.357 10.687 14.357 11.061 14.233L19.336 10.686L19.461 8.944L10.501 11.744L1.603 8.944Z"
+        fill="#CC104A"
+      />
+      <path
+        d="M19.834 9.255L11.061 12.988C10.936 13.051 10.75 13.113 10.563 13.113C10.376 13.113 10.252 13.051 10.065 12.988L1.167 9.255C0.545 9.006 0.421 7.202 0.669 6.019C0.732 5.771 0.794 5.584 0.856 5.397C0.981 5.211 1.043 5.086 1.167 5.024H19.834C19.958 5.086 20.021 5.148 20.083 5.273C20.207 5.459 20.27 5.708 20.332 5.957C20.581 7.202 20.394 9.006 19.834 9.255Z"
+        fill="#E93565"
+      />
+      <path
+        d="M7.514 3.779C6.145 4.526 4.838 5.21 3.656 5.895C2.972 6.33 2.536 7.077 2.598 7.886L3.345 17.655C3.407 18.153 3.656 18.65 4.03 18.899C4.963 19.584 6.518 20.517 7.265 19.895L6.456 19.335L6.27 7.637L10.501 5.273V3.779H7.514Z"
+        fill="#FFD475"
+      />
+      <path
+        d="M13.487 3.779C14.856 4.464 16.163 5.21 17.345 5.895C18.029 6.33 18.465 7.077 18.403 7.886L17.656 17.655C17.594 18.153 17.345 18.65 16.972 18.899C16.038 19.584 14.483 20.517 13.736 19.895L14.545 19.335L14.732 7.637L10.5 5.273V3.779H13.487Z"
+        fill="#FFD475"
+      />
+    </svg>
+  );
+}
+
 export function SimranWebViewPage(): React.ReactElement {
   const [phase, setPhase] = useState<Phase>('waiting-auth');
   const [problem, setProblem] = useState<Problem | null>(null);
   const [inputText, setInputText] = useState('');
   const [showGiftToast, setShowGiftToast] = useState(false);
-  const [viewersCount, setViewersCount] = useState(48);
+  const [viewersCount, setViewersCount] = useState(1);
 
   const commentsEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -90,7 +173,6 @@ export function SimranWebViewPage(): React.ReactElement {
     navigatedDuetRoom,
     navigatedSoloRecording,
     botTurnedOff,
-    coinBalance,
     connect,
     disconnect,
     toggleMute,
@@ -226,11 +308,11 @@ export function SimranWebViewPage(): React.ReactElement {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcripts]);
 
-  // Slight random drift for live viewers to feel organic
+  // Organic slight drift for live room viewers
   useEffect(() => {
     const interval = setInterval(() => {
-      setViewersCount((prev) => Math.max(38, Math.min(65, prev + (Math.random() > 0.5 ? 1 : -1))));
-    }, 8000);
+      setViewersCount((prev) => Math.max(1, Math.min(6, prev + (Math.random() > 0.6 ? 1 : -1))));
+    }, 12000);
     return () => clearInterval(interval);
   }, []);
 
@@ -248,209 +330,263 @@ export function SimranWebViewPage(): React.ReactElement {
   };
 
   const isSimranSpeaking = simranState === 'speaking';
-  const rippleScale = isSimranSpeaking ? 1 + Math.min(audioLevel * 0.9, 0.45) : 1;
+  const rippleScale = isSimranSpeaking ? 1 + Math.min(audioLevel * 0.8, 0.45) : 1;
 
   return (
     <div className="roxstar-room-container">
-      {/* ── TOP ROOM HEADER (Exact RoxStar sing_room header) ── */}
+      {/* ── TOP ROOM HEADER (Exact RoxStar 1:1 Live Room Layout) ── */}
       <header className="roxstar-room-header">
-        <div className="header-room-info">
-          <div className="header-level-badge">
-            <span className="level-number">1</span>
+        {/* Left: User Profile & ID */}
+        <div className="header-left-col">
+          <div className="header-user-pill">
+            <div className="header-user-gem">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                <path
+                  d="M12 2L2 7L12 12L22 7L12 2Z"
+                  fill="#00E5FF"
+                  stroke="#38BDF8"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M2 17L12 22L22 17M2 12L12 17L22 12"
+                  stroke="#38BDF8"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </div>
+            <div className="header-user-meta">
+              <span className="header-username">Simran</span>
+              <span className="header-userid">ID: 990835</span>
+            </div>
           </div>
-          <div className="header-room-meta">
-            <span className="room-name">Simran&apos;s Party Room 🎤</span>
-            <span className="room-id">ID: 990835</span>
+
+          {/* Sub-row under username: Music circle + Translucent Pink Star Pill */}
+          <div className="header-badges-row">
+            <button type="button" className="music-circle-btn" aria-label="Music">
+              <Music size={13} className="music-note-icon" />
+            </button>
+            <div className="star-capsule-pill">
+              <Star size={11} className="star-icon-gold" />
+              <span className="star-count-num">0</span>
+              <ChevronRight size={11} className="star-arrow-icon" />
+            </div>
+          </div>
+
+          {/* Stacked Loot Chests on the left */}
+          <div className="header-chests-col">
+            <div className="chest-badge-pill">
+              <img
+                src="/treasure_box_close.webp"
+                alt="Chest"
+                className="chest-icon-img"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <span className="chest-num">0/5K</span>
+            </div>
+            <div className="chest-badge-pill">
+              <img
+                src="/tresure_loot_box.png"
+                alt="Loot"
+                className="chest-icon-img"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <span className="chest-num">0/180</span>
+            </div>
           </div>
         </div>
 
-        <div className="header-right-actions">
-          {/* Star Count */}
-          <div className="header-pill header-star-pill">
-            <Star size={11} className="star-icon" />
-            <span>12.5k</span>
+        {/* Right: Viewers, Megaphone, Share, Leave + Today's Exp Bar */}
+        <div className="header-right-col">
+          <div className="header-actions-row">
+            {/* Viewers Pill */}
+            <div className="action-viewers-pill">
+              <Eye size={13} className="eye-icon-white" />
+              <span className="viewers-count-num">{viewersCount}</span>
+            </div>
+
+            {/* Megaphone Action */}
+            <button type="button" className="action-circle-icon-btn" aria-label="Announcements">
+              <Megaphone size={14} />
+            </button>
+
+            {/* Share Action */}
+            <button type="button" className="action-circle-icon-btn" aria-label="Share">
+              <Share2 size={14} />
+            </button>
+
+            {/* Power / Leave Room Button */}
+            <button
+              type="button"
+              className="action-circle-icon-btn action-leave-btn"
+              onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
+              aria-label="Exit Party Room"
+            >
+              <Power size={14} />
+            </button>
           </div>
 
-          {/* Viewers Count */}
-          <div className="header-pill header-viewers-pill">
-            <Eye size={12} className="eye-icon" />
-            <span>{viewersCount}</span>
+          {/* Today's Exp Progress Row */}
+          <div className="todays-exp-container">
+            <div className="exp-labels-row">
+              <span className="exp-title">Today&apos;s Exp</span>
+              <span className="exp-ratio">0/3000</span>
+            </div>
+            <div className="exp-track-line">
+              <div className="exp-fill-bar" style={{ width: '12%' }} />
+            </div>
           </div>
-
-          {/* Leave Button */}
-          <button
-            type="button"
-            className="header-exit-btn"
-            onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
-            aria-label="Exit Party Room"
-          >
-            ✕
-          </button>
         </div>
       </header>
 
-      {/* ── SUB-BAR: DAILY EXP PROGRESS ── */}
-      <div className="roxstar-sub-bar">
-        <div className="exp-meta">
-          <span className="exp-label">Daily Room EXP</span>
-          <span className="exp-value">650 / 1500</span>
-        </div>
-        <div className="exp-progress-track">
-          <div className="exp-progress-fill" style={{ width: '43%' }} />
-        </div>
-      </div>
-
-      {/* ── MAIN STAGE AREA: 8 SEATS CONCERT GRID ── */}
-      <main className="roxstar-stage-grid">
-        {/* ROW 1: Seat 1 (Simran Host), Seat 2 (You), Seat 3, Seat 4 */}
-        <div className="stage-row stage-row--primary">
-          {/* Seat 1: Simran (Host) */}
-          <div className="stage-seat stage-seat--host">
-            <div className="seat-avatar-wrapper">
-              {/* Dynamic Ripple Indicator (RoxStar DuetSpeakingIndicatorView) */}
-              <div
-                className={`speaking-ripple-container ${isSimranSpeaking ? 'speaking-ripple-container--active' : ''}`}
-                style={{ transform: `scale(${rippleScale})` }}
-              >
-                <div className="ripple-ring ring-1" />
-                <div className="ripple-ring ring-2" />
-                <div className="ripple-ring ring-3" />
-              </div>
-
-              {/* Host Avatar */}
-              <div className="seat-avatar host-avatar">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
-                  alt="Simran"
-                  className="avatar-img"
-                  onError={(e) => {
-                    // Fallback to elegant gradient avatar if offline
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-                <div className="avatar-fallback-initial">S</div>
-              </div>
-
-              {/* Green Active Mic Status Badge */}
-              <div className="seat-mic-status seat-mic-status--active">
-                <Volume2 size={10} />
-              </div>
+      {/* ── STAGE SEATS: 1 HOST (TOP CENTER) + 8 GUEST SEATS (2x4) ── */}
+      <main className="roxstar-stage-container">
+        {/* Host Seat (Centered directly inside the background radial rings) */}
+        <div className="stage-host-seat-wrapper">
+          <div className="host-seat-circle-container">
+            {/* RoxStar DuetSpeakingIndicatorView — Animated concentric pulse */}
+            <div
+              className={`speaking-ripple-container ${isSimranSpeaking ? 'speaking-ripple-container--active' : ''}`}
+              style={{ transform: `scale(${rippleScale})` }}
+            >
+              <div className="ripple-ring ring-1" />
+              <div className="ripple-ring ring-2" />
+              <div className="ripple-ring ring-3" />
             </div>
 
-            <div className="seat-info">
-              <span className="seat-host-badge">Lv.5 🎤</span>
-              <span className="seat-user-name">Simran</span>
-              <span className="seat-stars">⭐ 3.8k</span>
+            {/* Host Circle */}
+            <div className="host-avatar-circle">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+                alt="Host"
+                className="host-avatar-img"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              <div className="host-fallback-initial">S</div>
+            </div>
+
+            {/* Mic indicator */}
+            <div className="host-mic-badge">
+              <Volume2 size={9} />
             </div>
           </div>
+          <span className="seat-label-text host-label">Host</span>
+        </div>
 
-          {/* Seat 2: You (Guest) */}
-          <div className="stage-seat stage-seat--user">
-            <div className="seat-avatar-wrapper">
-              <div className="seat-avatar user-avatar">
-                <div className="avatar-user-initial">
-                  {userName.charAt(0).toUpperCase()}
+        {/* 8 Guest Seats Grid: Row 1 (No.1 - No.4) & Row 2 (No.5 - No.8) */}
+        <div className="stage-guest-seats-grid">
+          {/* ── ROW 1 ── */}
+          <div className="guest-seats-row">
+            {/* Seat No.1 (User is automatically seated here!) */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--user">
+                <div className="user-seat-avatar">
+                  <span>{userName.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className={`user-seat-mic ${isMuted ? 'user-seat-mic--muted' : 'user-seat-mic--active'}`}>
+                  {isMuted ? <MicOff size={9} /> : <Mic size={9} />}
                 </div>
               </div>
+              <span className="seat-label-text">No.1</span>
+            </div>
 
-              {/* User Mic Status Badge */}
-              <div className={`seat-mic-status ${isMuted ? 'seat-mic-status--muted' : 'seat-mic-status--active'}`}>
-                {isMuted ? <MicOff size={10} /> : <Mic size={10} />}
+            {/* Seat No.2 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
               </div>
+              <span className="seat-label-text">No.2</span>
             </div>
 
-            <div className="seat-info">
-              <span className="seat-user-badge">You</span>
-              <span className="seat-user-name">{userName}</span>
-              <span className="seat-stars">⭐ 50</span>
+            {/* Seat No.3 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.3</span>
+            </div>
+
+            {/* Seat No.4 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.4</span>
             </div>
           </div>
 
-          {/* Seat 3: Empty Seat */}
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
+          {/* ── ROW 2 ── */}
+          <div className="guest-seats-row">
+            {/* Seat No.5 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.5</span>
             </div>
-            <span className="seat-empty-label">Seat 3</span>
-          </div>
 
-          {/* Seat 4: Empty Seat */}
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
+            {/* Seat No.6 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.6</span>
             </div>
-            <span className="seat-empty-label">Seat 4</span>
-          </div>
-        </div>
 
-        {/* ROW 2: Seats 5, 6, 7, 8 */}
-        <div className="stage-row stage-row--secondary">
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
+            {/* Seat No.7 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.7</span>
             </div>
-            <span className="seat-empty-label">Seat 5</span>
-          </div>
 
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
+            {/* Seat No.8 */}
+            <div className="guest-seat-item">
+              <div className="guest-seat-circle guest-seat-circle--empty">
+                <SofaIcon />
+              </div>
+              <span className="seat-label-text">No.8</span>
             </div>
-            <span className="seat-empty-label">Seat 6</span>
-          </div>
-
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
-            </div>
-            <span className="seat-empty-label">Seat 7</span>
-          </div>
-
-          <div className="stage-seat stage-seat--empty">
-            <div className="seat-avatar-wrapper empty-seat-circle">
-              <Plus size={16} className="plus-icon" />
-            </div>
-            <span className="seat-empty-label">Seat 8</span>
           </div>
         </div>
       </main>
 
-      {/* ── LIVE SINGING QUEUE BANNER ── */}
-      <div className="roxstar-queue-banner">
-        <div className="queue-banner-left">
-          <div className="queue-music-icon">
-            <Music2 size={15} />
+      {/* ── LOWER-THIRD NOTICES & LIVE CONVERSATION STREAM ── */}
+      <section className="roxstar-notices-feed">
+        {/* Notice 1: Welcome to Simran */}
+        <div className="notice-row">
+          <div className="notice-pink-circle">
+            <Megaphone size={14} className="megaphone-white" />
           </div>
-          <div className="queue-banner-meta">
-            <span className="queue-banner-title">Live Queue (1 Song)</span>
-            <span className="queue-banner-subtitle">
-              {handoffRef.current.solo || 'Diljit Dosanjh - Lover'}
-            </span>
+          <div className="notice-bubble-pill">
+            <span>🎙️ Welcome to the Simran! 🎉</span>
           </div>
         </div>
 
-        <button
-          type="button"
-          className="queue-sing-btn"
-          onClick={() => {
-            void sendTextTurn('Hey Simran! Lets sing a duet together!');
-          }}
-        >
-          SING
-        </button>
-      </div>
-
-      {/* ── FLOATING LIVE COMMENTS FEED (Auto-scrolling over stage) ── */}
-      <section className="roxstar-comments-container">
-        {/* System Announcements */}
-        <div className="comment-bubble comment-bubble--system">
-          <span className="system-pill-badge">Notice</span>
-          <span>Welcome to Simran&apos;s Room! Feel free to talk and sing together.</span>
+        {/* Notice 2: Seated automatically */}
+        <div className="notice-row">
+          <div className="notice-pink-circle">
+            <Megaphone size={14} className="megaphone-white" />
+          </div>
+          <div className="notice-bubble-pill">
+            <span>Seated automatically in this room</span>
+          </div>
         </div>
 
-        <div className="comment-bubble comment-bubble--reward">
-          <Sparkles size={13} className="reward-sparkle" />
-          <span>🎁 50 Welcome Coins added to your wallet!</span>
+        {/* Notice 3: Keep it fun & respectful */}
+        <div className="notice-row">
+          <div className="notice-pink-circle">
+            <Megaphone size={14} className="megaphone-white" />
+          </div>
+          <div className="notice-bubble-pill">
+            <span>🌟 Let&apos;s keep it fun, respectful, and unforgettable!</span>
+          </div>
         </div>
 
         {/* Live Conversation Stream as Chat Messages */}
@@ -459,14 +595,11 @@ export function SimranWebViewPage(): React.ReactElement {
           if (item.speaker === 'System') return null;
 
           return (
-            <div
-              key={item.id}
-              className={`comment-bubble ${isSimran ? 'comment-bubble--host' : 'comment-bubble--user'}`}
-            >
-              <span className={`comment-sender ${isSimran ? 'comment-sender--host' : 'comment-sender--user'}`}>
-                {isSimran ? 'Simran' : userName}:
-              </span>
-              <span className="comment-text">{item.text}</span>
+            <div key={item.id} className="live-chat-bubble-row">
+              <div className={`chat-bubble-content ${isSimran ? 'chat-bubble--simran' : 'chat-bubble--user'}`}>
+                <span className="chat-speaker-name">{isSimran ? 'Simran' : userName}:</span>
+                <span className="chat-speaker-text">{item.text}</span>
+              </div>
             </div>
           );
         })}
@@ -477,7 +610,7 @@ export function SimranWebViewPage(): React.ReactElement {
       {/* ── GIFT REWARD CELEBRATION TOAST ── */}
       {showGiftToast && (
         <div className="gift-celebration-toast">
-          <Gift size={20} className="gift-toast-icon" />
+          <GiftRoomIcon />
           <div className="gift-toast-text">
             <strong>Welcome Bonus!</strong>
             <span>Claimed 50 RoxStar coins for your party room singing.</span>
@@ -509,66 +642,69 @@ export function SimranWebViewPage(): React.ReactElement {
         </div>
       )}
 
-      {/* ── BOTTOM CONTROL BAR (Exact RoxStar Party Room Actions) ── */}
+      {/* ── BOTTOM CONTROL BAR (Exact RoxStar 1:1 Actions) ── */}
       <footer className="roxstar-bottom-bar">
-        {/* Text Comment Input Form */}
-        <form onSubmit={handleSendComment} className="bottom-input-pill">
+        {/* Full-width "Let's talk" Input Pill */}
+        <form onSubmit={handleSendComment} className="bottom-pill-input-form">
           <input
             type="text"
-            placeholder="Let's talk..."
+            placeholder="Let's talk"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             disabled={!isConnected}
-            className="bottom-text-input"
+            className="bottom-pill-input"
           />
-          <button type="submit" className="bottom-send-btn" disabled={!inputText.trim()}>
-            <Send size={15} />
-          </button>
+          {inputText.trim() && (
+            <button type="submit" className="bottom-pill-send-btn" aria-label="Send">
+              <Send size={14} />
+            </button>
+          )}
         </form>
 
-        {/* Action Buttons: Mic, Song, Gift, Exit */}
-        <div className="bottom-action-buttons">
-          {/* Mic Toggle Button */}
+        {/* 4 Circular Action Buttons: Hand, Send/Plane, Menu, Gift */}
+        <div className="bottom-action-buttons-group">
+          {/* Hand Raise Button */}
           <button
             type="button"
-            className={`action-circle-btn ${isMuted ? 'action-circle-btn--muted' : 'action-circle-btn--mic-on'}`}
+            className="bottom-round-btn"
+            onClick={() => void sendTextTurn('Hey Simran! I want to sing a song!')}
+            title="Raise Hand"
+            aria-label="Raise Hand"
+          >
+            <Hand size={18} />
+          </button>
+
+          {/* Send / Airplane Button (Quick Voice / Mic Toggle) */}
+          <button
+            type="button"
+            className={`bottom-round-btn ${isMuted ? 'bottom-round-btn--muted' : ''}`}
             onClick={() => void toggleMute()}
-            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
+            aria-label="Toggle Mic"
           >
-            {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+            {isMuted ? <MicOff size={18} /> : <Send size={16} />}
           </button>
 
-          {/* Song Request Button */}
+          {/* Menu Button */}
           <button
             type="button"
-            className="action-circle-btn action-circle-btn--music"
-            onClick={() => {
-              void sendTextTurn('Simran, can we sing Diljit Dosanjh - Lover?');
-            }}
-            title="Request Song"
+            className="bottom-round-btn"
+            onClick={() => void sendTextTurn('What songs should we sing next?')}
+            title="Room Options"
+            aria-label="Room Menu"
           >
-            <Music2 size={18} />
+            <Menu size={18} />
           </button>
 
-          {/* Gift Box Button */}
+          {/* 3D Gift Box Button */}
           <button
             type="button"
-            className="action-circle-btn action-circle-btn--gift"
+            className="bottom-round-btn bottom-gift-btn"
             onClick={handleSendGift}
-            title="Claim or send 50 coins gift"
+            title="Send Gift"
+            aria-label="Send Gift"
           >
-            <Gift size={18} />
-            <span className="gift-badge-coin">{coinBalance > 0 ? coinBalance : 50}</span>
-          </button>
-
-          {/* Leave Room Button */}
-          <button
-            type="button"
-            className="action-circle-btn action-circle-btn--leave"
-            onClick={() => hangUp({ destination: 'none', reason: 'ended' })}
-            title="Leave party room"
-          >
-            <LogOut size={17} />
+            <GiftRoomIcon />
           </button>
         </div>
       </footer>

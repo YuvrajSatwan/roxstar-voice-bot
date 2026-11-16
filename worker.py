@@ -536,7 +536,7 @@ async def entrypoint(ctx: JobContext) -> None:
                                 "message": "Simran is back on mic!",
                             })
                             session.generate_reply(
-                                user_input=(
+                                instructions=(
                                     f"{text}\n[EVENT: You were away for chai/client work and user called you back. "
                                     f"Return warmly and easily, in your own words, like 'Haan, main aa gayi. Kaisa raha duet?' Keep strictly under 18 words, stay on 'aap'.]"
                                 )
@@ -559,7 +559,7 @@ async def entrypoint(ctx: JobContext) -> None:
                             "reason": excuse,
                         })
                         session.generate_reply(
-                            user_input=(
+                            instructions=(
                                 f"{text}\n[SYSTEM ALERT - CRITICAL: User has declined/deflected {tracker.action_nudge_count} times! "
                                 f"YOUR VERY NEXT TURN MUST BE YOUR EXIT EXCUSE. Keep it strictly under 25 words! "
                                 f"DO NOT ASK ANY QUESTION! DO NOT CONTINUE SMALL TALK! "
@@ -569,7 +569,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         )
                     else:
                         session.generate_reply(
-                            user_input=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question, placed last. Say nothing about yourself unless they asked. Let the topic breathe.]"
+                            instructions=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question, placed last. Say nothing about yourself unless they asked. Let the topic breathe.]"
                         )
 
             elif msg_type == "roxstar.set_laugh_mode":
@@ -618,7 +618,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "message": "Simran is back on mic!",
                     })
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             "[EVENT: User just returned from their duet stage session and recalled you. "
                             "Greet them warmly and easily, glad they are back, and ask how the duet went, in your own words, like 'Arre, aap aa gaye! Kaisa raha duet?' "
                             "Keep it strictly under 18 words, stay on 'aap'.]"
@@ -630,7 +630,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     logger.info("Dispatching contextual tooltip: %s", tooltip["id"])
                     publish_data({"type": "roxstar.tooltip", **tooltip})
                 if hint:
-                    session.generate_reply(user_input=hint)
+                    session.generate_reply(instructions=hint)
                 publish_data({
                     "type": "roxstar.user_state",
                     "profile": tracker.profile.to_dict(),
@@ -655,7 +655,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "reason": excuse,
                     })
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             f"[CRITICAL: User has declined/deflected action {tracker.action_nudge_count} times! "
                             f"YOUR VERY NEXT TURN MUST BE YOUR EXIT EXCUSE. Keep it strictly under 25 words! "
                             f"DO NOT ASK ANY QUESTION! DO NOT CONTINUE SMALL TALK! "
@@ -665,7 +665,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     )
                 else:
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             "The user hesitated or declined the duet suggestion. Deliver Encouragement Attempt 2 gently in natural Hindi: "
                             "tell them they can sing and post their favourite song whenever they feel like it, and promise "
                             "you will wait for their song, listen to it, and comment on it "
@@ -713,7 +713,14 @@ async def entrypoint(ctx: JobContext) -> None:
     # Trigger opening line natively for a visitor with minimum latency
     async def send_greeting() -> None:
         nonlocal has_greeted
-        await asyncio.sleep(0.08)  # minimal 80ms buffer for initial WebRTC track link
+        # Wait up to 3.0s for the Realtime session to reach listening/idle state and WebSocket handshake to complete
+        for _ in range(15):
+            await asyncio.sleep(0.2)
+            if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
+                return
+            if getattr(session, "agent_state", None) in ("listening", "idle"):
+                break
+
         if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
             return
         has_greeted = True
@@ -721,7 +728,7 @@ async def entrypoint(ctx: JobContext) -> None:
             if tracker.profile.is_returning and tracker.profile.name:
                 logger.info("Triggering personalized warm welcome for returning user: %s", tracker.profile.name)
                 session.generate_reply(
-                    user_input=(
+                    instructions=(
                         f"User '{tracker.profile.name}' is a returning friend. Greet them warmly by first name, glad they are back, bright but easy (not over the top), "
                         "and ask one light thing, like which song has been on loop lately, in your own words. Do not recite a script and do not re-introduce yourself. "
                         "(IMPORTANT: pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
@@ -730,7 +737,7 @@ async def entrypoint(ctx: JobContext) -> None:
             else:
                 logger.info("Triggering signature opening line for new visitor (asking user name first)")
                 session.generate_reply(
-                    user_input=(
+                    instructions=(
                         "Greet them with a warm, bright, easy tone (a smile in your voice, not a shout). "
                         "Pick ONE of your opening angles and say it in your own words, then ask the user's name, like 'Hey! Ek aur singer aa gaya lagta hai. Naam kya hai aapka?' "
                         "(CRITICAL: DO NOT say your name 'Simran' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
@@ -738,6 +745,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 )
         except Exception as exc:
             logger.warning("Greeting via generate_reply failed: %s", exc)
+            has_greeted = False
 
     greeting_task = asyncio.create_task(send_greeting())
     background_tasks.add(greeting_task)
@@ -779,7 +787,7 @@ async def entrypoint(ctx: JobContext) -> None:
             publish_data({"type": "roxstar.stage_transferred", "reason": excuse})
             try:
                 session.generate_reply(
-                    user_input=(
+                    instructions=(
                         "[SYSTEM ALERT - CRITICAL: Time for this chat is up. YOUR VERY NEXT TURN MUST BE YOUR EXIT. "
                         "Keep it strictly under 25 words! DO NOT ASK ANY QUESTION! "
                         f"Wrap up warmly using this natural excuse: '{excuse}', say goodbye, and exit! "

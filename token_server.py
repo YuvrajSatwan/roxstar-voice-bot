@@ -455,9 +455,9 @@ class StsTokenHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON body"})
             return
 
-        user_message = str(body.get("user_message", "")).strip()
-        user_name = clean_display_name(body.get("user_name", "dost"))
-        recent_history = body.get("recent_history", [])
+        user_message = str(body.get("user_message") or body.get("message") or "").strip()
+        user_name = clean_display_name(body.get("user_name") or body.get("name") or "dost")
+        recent_history = body.get("recent_history") or body.get("history") or []
 
         if not user_message:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Missing user_message"})

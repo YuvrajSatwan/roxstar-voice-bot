@@ -47,8 +47,18 @@ from sts_lab.roxstar_auth import (
     verify_access_token,
 )
 from sts_lab.session_limits import SessionRateLimiter
+from sts_lab.text_chat import SimranTextChatEngine
+import hmac
 
 _admin_runner = AdminDbRunner()
+_chat_engine: SimranTextChatEngine | None = None
+
+
+def get_chat_engine() -> SimranTextChatEngine:
+    global _chat_engine
+    if _chat_engine is None:
+        _chat_engine = SimranTextChatEngine()
+    return _chat_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("sts_token_server")
@@ -429,9 +439,44 @@ class StsTokenHandler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
+    def _handle_simran_chat_reply(self) -> None:
+        """Handle POST /api/simran/chat-reply from rox-chat microservice."""
+        configured_secret = getattr(self.settings, "simran_internal_secret", "") or os.getenv("SIMRAN_INTERNAL_SECRET", "")
+        if configured_secret:
+            incoming_secret = self.headers.get("X-Simran-Secret") or parse_bearer(self.headers.get("Authorization", ""))
+            if not incoming_secret or not hmac.compare_digest(incoming_secret, configured_secret):
+                logger.warning("Unauthorized /api/simran/chat-reply attempt")
+                self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "Invalid internal secret"})
+                return
+
+        try:
+            body = self._read_json()
+        except Exception:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Invalid JSON body"})
+            return
+
+        user_message = str(body.get("user_message", "")).strip()
+        user_name = clean_display_name(body.get("user_name", "dost"))
+        recent_history = body.get("recent_history", [])
+
+        if not user_message:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Missing user_message"})
+            return
+
+        engine = get_chat_engine()
+        reply_data = engine.generate_reply(
+            user_message=user_message,
+            user_name=user_name,
+            recent_history=recent_history,
+        )
+        self._send_json(HTTPStatus.OK, reply_data)
+
     def do_POST(self) -> None:  # noqa: N802
         if self.path.startswith("/api/admin"):
             self._handle_admin("POST")
+            return
+        if self.path == "/api/simran/chat-reply":
+            self._handle_simran_chat_reply()
             return
         if self.path not in ("/token", "/rooms"):
             self._drain_body()

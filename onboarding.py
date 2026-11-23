@@ -221,6 +221,25 @@ class DuetRoom:
     host_name: str
     song_title: str
     singers_count: int = 1
+    # Set when this "room" is really a RoxStar duet POST (the app opens the post, not a party room).
+    post_id: str = ""
+
+
+def featured_duet_pitch(room: DuetRoom) -> str:
+    """What check_available_duets tells Simran when there is exactly one featured duet.
+
+    The Phase 4 flow in the prompt is unchanged: she pitches it, the USER answers, and only a clear yes
+    makes her call navigate_to_duet. Hesitation and declines follow the prompt (reassure, solo, exit).
+    """
+    return (
+        f"Available live duet: {room.host_name} is live singing '{room.song_title}' (Room ID: {room.room_id}). "
+        f"It is the only one, so do NOT offer a choice of rooms. "
+        f"INSTRUCTION: Casually ask, in your own words, whether they would like to jam with {room.host_name} on "
+        f"'{room.song_title}'. Use only that exact host name and song title. "
+        f"Do NOT call navigate_to_duet yet: wait for the user's answer. "
+        f"If they clearly agree, call navigate_to_duet('{room.room_id}') immediately and hand off. "
+        f"If they hesitate or say no, follow your normal Phase 4 steps (reassure, then solo recording, then exit)."
+    )
 
 
 class DuetRoomRegistry:
@@ -238,6 +257,7 @@ class DuetRoomRegistry:
         fetcher: Callable[[], list[dict[str, str]]] | None = None,
         strict: bool = False,
         clock: Callable[[], float] = time.monotonic,
+        featured: DuetRoom | None = None,
     ) -> None:
         """
         fetcher: asks the real RoxStar backend for live rooms (see rox_services.fetch_active_duets).
@@ -249,6 +269,9 @@ class DuetRoomRegistry:
         self._fetcher = fetcher
         self.strict = strict
         self._clock = clock
+        # Optional single "featured" destination (the final duet post). When set it is the ONLY option
+        # Simran offers: no choice, no live-list lookup. None = behaviour unchanged.
+        self.featured = featured
         self._fetched_at: float | None = None
         if strict and initial_rooms is None:
             initial_rooms = []
@@ -299,6 +322,8 @@ class DuetRoomRegistry:
             }
 
     def list_available(self, genre: str | None = None) -> list[DuetRoom]:
+        if self.featured is not None:
+            return [self.featured]
         rooms = list(self._rooms.values())
         if not genre:
             return rooms
@@ -313,7 +338,7 @@ class DuetRoomRegistry:
         If the backend is down or has no rooms, the list becomes empty and Simran offers solo recording.
         It never raises.
         """
-        if self._fetcher is None:
+        if self._fetcher is None or self.featured is not None:
             return
         now = self._clock()
         if self._fetched_at is not None:
@@ -342,6 +367,8 @@ class DuetRoomRegistry:
         self._fetched_at = now
 
     def get_room(self, room_id: str) -> DuetRoom | None:
+        if self.featured is not None:
+            return self.featured  # the only destination there is, whatever id the model passes
         if room_id in self._rooms:
             return self._rooms[room_id]
         if self.strict:

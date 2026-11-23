@@ -9,10 +9,11 @@
 
 Before beginning any substantial development task:
 
-1. **Read Core Context First**:
-   - [`AGENTS.md`](file:///y:/roxstar/sts_lab/AGENTS.md) (this file)
-   - [`docs/PROJECT_CONTEXT.md`](file:///y:/roxstar/sts_lab/docs/PROJECT_CONTEXT.md) (architecture, data flows, and decisions)
-   - [`docs/TASKS.md`](file:///y:/roxstar/sts_lab/docs/TASKS.md) (current task state and roadmap)
+1. **Read context only as needed** (workspace-wide rules are in `Y:\roxstar\AGENTS.md`; do not repeat them here):
+   - This file, always.
+   - [`docs/PROJECT_CONTEXT.md`](file:///y:/roxstar/sts_lab/docs/PROJECT_CONTEXT.md): start with its "Quick summary" at the top; read further sections only when the task touches that area.
+   - [`docs/TASKS.md`](file:///y:/roxstar/sts_lab/docs/TASKS.md): only when planning roadmap work or checking known bugs.
+   - Never open `*_ARCHIVE.md` files unless you need history.
 2. **Inspect Existing Implementations**:
    - Check existing helper methods, models, and hooks before writing new code.
    - Never assume functionality is missing without inspecting [`worker.py`](file:///y:/roxstar/sts_lab/worker.py), [`onboarding.py`](file:///y:/roxstar/sts_lab/onboarding.py), or [`web/src/hooks/useStsRoom.ts`](file:///y:/roxstar/sts_lab/web/src/hooks/useStsRoom.ts).
@@ -81,9 +82,7 @@ npm --prefix web run build
 
 ## 5. Security & Sensitive Information
 
-- **Secrets Management**: LiveKit keys (`LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`), Gemini keys (`GEMINI_API_KEY`), and server URLs are loaded from `.env` via `config.py`.
-- **Never Commit Secrets**: Do not log, print, hardcode, or write secrets into Markdown, code, or test files.
-- **Safe Template**: If new environment variables are added, update [`.env.example`](file:///y:/roxstar/sts_lab/.env.example) with placeholder values only.
+Secrets and `.env` rules are in the workspace `AGENTS.md`. Repo specifics: keys (`LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `GEMINI_API_KEY`) load from `.env` via `config.py`; new variables go into [`.env.example`](file:///y:/roxstar/sts_lab/.env.example) as empty placeholders only.
 
 ---
 
@@ -92,5 +91,5 @@ npm --prefix web run build
 Whenever substantial architectural changes, new dependencies, or new tools are introduced:
 1. Update [`docs/PROJECT_CONTEXT.md`](file:///y:/roxstar/sts_lab/docs/PROJECT_CONTEXT.md) with architectural adjustments.
 2. Update [`docs/TASKS.md`](file:///y:/roxstar/sts_lab/docs/TASKS.md) to reflect completed, ongoing, and pending work.
-3. Add a dated entry to [`docs/CHANGELOG.md`](file:///y:/roxstar/sts_lab/docs/CHANGELOG.md).
+3. Add a dated entry at the TOP of [`docs/CHANGELOG.md`](file:///y:/roxstar/sts_lab/docs/CHANGELOG.md) (older entries live in `CHANGELOG_ARCHIVE.md`; keep only the latest few weeks in the main file).
 

@@ -6,6 +6,18 @@
 
 ---
 
+## Quick summary (read this first; the rest is detail)
+
+- **What**: Simran is a 22-year-old Delhi music-host voice companion for RoxStar. She talks to a new user once, then hands them to a duet or solo recording.
+- **Voice path**: browser or app WebView -> `token_server.py` (:8001, mints a LiveKit token and sends the agent) -> `worker.py` (LiveKit agent, Gemini Live speech-to-speech) -> audio and data packets back to the web stage.
+- **Chat path**: rox-chat calls `POST /api/simran/chat-reply` -> `text_chat.py` (Gemini Flash Lite, JSON reply plus a join-card flag) with canned fallbacks.
+- **Modes**: standalone lab (anyone, room code) and `STS_AUTH_MODE=roxstar` (RoxStar login, private room `sts-simran-<userID>`, capacity and hourly limits).
+- **Flags (all off by default)**: `STS_PREWARM_ENABLED` (early start), `STS_SINGLE_SESSION_PER_USER` (one conversation each), `STS_DUET_POST_ID` (final duet handoff).
+- **Key files**: `prompt.py` (persona), `onboarding.py` (state, duet registry), `session_gate.py`, `session_limits.py`, `config.py`, `web/src/simran/SimranWebViewPage.tsx` (app page).
+- **Verify**: `py -m pytest tests/ -v` and `npm --prefix web run build`.
+
+---
+
 ## 1. Project Purpose & Primary Functionality
 
 **STS Lab** is a high-performance, low-latency AI Voice Companion prototype built for **RoxStar**, an India-born social singing and karaoke platform.

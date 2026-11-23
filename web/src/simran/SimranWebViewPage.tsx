@@ -30,12 +30,14 @@ import './simran-webview.css';
 const BACKGROUND_GRACE_MS = 30_000;
 const HANDOFF_FALLBACK_MS = 20_000;
 const END_GRACE_MS = 1_500;
-const AUTH_WAIT_MS = 200;
+// The app no longer puts the login token in the page URL; it sends it right after the page says "ready".
+// Wait long enough for that hand-over on a slow phone. (No cost when a token is already there.)
+const AUTH_WAIT_MS = 3000;
 
 type Phase = 'waiting-auth' | 'ready' | 'connecting' | 'live' | 'problem';
 
 interface Problem {
-  reason: 'busy' | 'rate_limited' | 'unauthorized' | 'mic_denied' | 'error';
+  reason: 'busy' | 'rate_limited' | 'unauthorized' | 'mic_denied' | 'session_expired' | 'error';
   title: string;
   message: string;
 }
@@ -48,6 +50,10 @@ const PROBLEMS: Record<Problem['reason'], Omit<Problem, 'reason'>> = {
   rate_limited: {
     title: 'Thodi der baad milte hain',
     message: 'Aap kai baar join kar chuke ho. Thodi der rest leke phir aana!',
+  },
+  session_expired: {
+    title: 'Session khatam ho gaya',
+    message: 'Simran ke saath aapki baat ho chuki hai. Messages mein unse chat karte rahiye!',
   },
   unauthorized: {
     title: 'Login check nahi ho paya',
@@ -68,6 +74,7 @@ function classifyProblem(message: string): Problem['reason'] {
   if (m === 'busy') return 'busy';
   if (m === 'rate_limited') return 'rate_limited';
   if (m === 'unauthorized') return 'unauthorized';
+  if (m === 'session_expired') return 'session_expired';
   if (/permission|denied|notallowed|not allowed|microphone/.test(m)) return 'mic_denied';
   return 'error';
 }
@@ -171,20 +178,26 @@ export function SimranWebViewPage(): React.ReactElement {
     error,
     transcripts,
     navigatedDuetRoom,
+    navigatedDuetPostId,
     navigatedSoloRecording,
     botTurnedOff,
     connect,
     disconnect,
     toggleMute,
     sendTextTurn,
-    triggerCoinsPopup,
+    coinsAwardedEvent,
+    dismissCoinsReward,
   } = useStsRoom();
 
   const userName = useMemo(() => getNativeName() || 'Guest', []);
 
   // Track handoff targets
-  const handoffRef = useRef<{ duet: string | null; solo: string | null }>({ duet: null, solo: null });
-  handoffRef.current = { duet: navigatedDuetRoom, solo: navigatedSoloRecording };
+  const handoffRef = useRef<{ duet: string | null; duetPost: string | null; solo: string | null }>({
+    duet: null,
+    duetPost: null,
+    solo: null,
+  });
+  handoffRef.current = { duet: navigatedDuetRoom, duetPost: navigatedDuetPostId, solo: navigatedSoloRecording };
   const hasConnectedRef = useRef(false);
 
   const hangUp = useCallback(
@@ -252,7 +265,8 @@ export function SimranWebViewPage(): React.ReactElement {
     if (!handoffTarget) return;
     const close = () => {
       const h = handoffRef.current;
-      if (h.duet) hangUp({ destination: 'duet', room_id: h.duet });
+      if (h.duet && h.duetPost) hangUp({ destination: 'duet_post', post_id: h.duetPost });
+      else if (h.duet) hangUp({ destination: 'duet', room_id: h.duet });
       else if (h.solo) hangUp({ destination: 'solo', song_title: h.solo });
     };
     if (botTurnedOff) {
@@ -323,8 +337,15 @@ export function SimranWebViewPage(): React.ReactElement {
     setInputText('');
   };
 
+  // The popup appears ONLY when Simran talks about the welcome coins (see useStsRoom). Claim closes it for good:
+  // the hook shows it once per session, so it cannot come back.
+  const handleClaimCoins = () => {
+    dismissCoinsReward();
+    setShowGiftToast(true);
+    setTimeout(() => setShowGiftToast(false), 3500);
+  };
+
   const handleSendGift = () => {
-    triggerCoinsPopup(50, 'Welcome Reward Claimed');
     setShowGiftToast(true);
     setTimeout(() => setShowGiftToast(false), 3500);
   };
@@ -460,7 +481,7 @@ export function SimranWebViewPage(): React.ReactElement {
             {/* Host Circle */}
             <div className="host-avatar-circle">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+                src="/simran_avatar.jpg"
                 alt="Host"
                 className="host-avatar-img"
                 onError={(e) => {
@@ -607,13 +628,27 @@ export function SimranWebViewPage(): React.ReactElement {
         <div ref={commentsEndRef} />
       </section>
 
+      {/* ── WELCOME COINS CLAIM POPUP (only when Simran mentions the coins) ── */}
+      {coinsAwardedEvent && (
+        <div className="coins-claim-overlay" role="dialog" aria-modal="true" aria-label="Claim welcome coins">
+          <div className="coins-claim-card">
+            <div className="coins-claim-amount">+{coinsAwardedEvent.amount}</div>
+            <strong className="coins-claim-title">Welcome Coins</strong>
+            <span className="coins-claim-sub">A little welcome gift from Simran</span>
+            <button type="button" className="coins-claim-btn" onClick={handleClaimCoins}>
+              Claim
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── GIFT REWARD CELEBRATION TOAST ── */}
       {showGiftToast && (
         <div className="gift-celebration-toast">
           <GiftRoomIcon />
           <div className="gift-toast-text">
             <strong>Welcome Bonus!</strong>
-            <span>Claimed 50 RoxStar coins for your party room singing.</span>
+            <span>50 welcome coins claimed.</span>
           </div>
         </div>
       )}

@@ -15,20 +15,22 @@
  *   window.__simranReceive(jsonStringOrObject)
  *   window.postMessage(jsonStringOrObject, '*')
  *
- * HOW THE LOGIN TOKEN ARRIVES IS NOT DECIDED YET (open item L1). This file supports every option
- * on the table, so choosing later is a small change:
- *   (a) app injects  window.__ROXSTAR_AUTH__ = { accessToken, name }  before the page loads
- *   (b) app sends a message  { type: 'auth', token, name }  after the page loads
- *   (c) developers only: ?dev_token=...  (this branch is removed from production builds)
+ * HOW THE LOGIN TOKEN ARRIVES (production, Android app):
+ *   (a) app injects  window.__ROXSTAR_AUTH__ = { accessToken, name }  once the page has loaded
+ *   (b) app sends a message  { type: 'auth', token, name }  right after the page sends simran.ready
+ *   (c) developers only: ?token= / ?dev_token= / ?accessToken= in the URL. This branch runs only in Vite
+ *       dev builds (import.meta.env.DEV). In a production build the URL is never read for a token.
  * The token is kept in memory only: never in localStorage, never in a URL in production.
  */
 
-export type CloseDestination = 'duet' | 'solo' | 'none';
+export type CloseDestination = 'duet' | 'duet_post' | 'solo' | 'none';
 
 export interface CloseMessage {
   type: 'simran.close';
   destination: CloseDestination;
   room_id?: string;
+  /** With destination 'duet_post': the RoxStar post (a duet) the app should open. */
+  post_id?: string;
   song_title?: string;
   /** Why we are closing without a destination: declined | ended | busy | rate_limited | error | mic_denied | timeout | unauthorized */
   reason?: string;
@@ -97,16 +99,19 @@ export function getAuthToken(): string | null {
     auth.name = window.__ROXSTAR_AUTH__?.name ?? auth.name;
     return auth.token;
   }
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token') || params.get('dev_token') || params.get('accessToken');
-    const urlName = params.get('name') || params.get('user_name');
-    if (urlToken) {
-      auth.token = urlToken;
-      if (urlName) auth.name = urlName;
-      return urlToken;
-    }
-  } catch {}
+  // Developer convenience only. Dead code in production builds: a token in a URL would end up in logs.
+  if (import.meta.env.DEV) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token') || params.get('dev_token') || params.get('accessToken');
+      const urlName = params.get('name') || params.get('user_name');
+      if (urlToken) {
+        auth.token = urlToken;
+        if (urlName) auth.name = urlName;
+        return urlToken;
+      }
+    } catch {}
+  }
   return null;
 }
 

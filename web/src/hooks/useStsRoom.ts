@@ -74,6 +74,8 @@ export function useStsRoom() {
   const [userProfile, setUserProfile] = useState<UserDiscoveryProfile | null>(null);
   const [discoveredTopics, setDiscoveredTopics] = useState<string[]>([]);
   const [navigatedDuetRoom, setNavigatedDuetRoom] = useState<string | null>(null);
+  /** Set when the duet is a RoxStar post (not a party room): the app opens that post. */
+  const [navigatedDuetPostId, setNavigatedDuetPostId] = useState<string | null>(null);
   const [navigatedSoloRecording, setNavigatedSoloRecording] = useState<string | null>(null);
 
   // Pillar 2 & 3: Simran stage handover and coins reward states
@@ -273,6 +275,7 @@ export function useStsRoom() {
               }
             } else if (msg.type === 'roxstar.duet_navigation') {
               console.log('Duet navigation triggered by Simran:', msg.room_id);
+              setNavigatedDuetPostId(msg.post_id ? String(msg.post_id) : null);
               setNavigatedDuetRoom(msg.room_id || 'duet-active');
             } else if (msg.type === 'roxstar.solo_recording_navigation') {
               console.log('Solo recording navigation triggered by Simran:', msg.song_title);
@@ -540,6 +543,7 @@ export function useStsRoom() {
     userProfile,
     discoveredTopics,
     navigatedDuetRoom,
+    navigatedDuetPostId,
     clearDuetNavigation,
     navigatedSoloRecording,
     clearSoloNavigation,

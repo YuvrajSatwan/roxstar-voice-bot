@@ -55,6 +55,8 @@ export async function requestStsSession(name: string, room?: string): Promise<St
   // (a room sent from here is ignored). In the standalone lab there is no token and nothing changes.
   const authToken = getAuthToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  // Only a developer tunnel (ngrok) needs this header. Never send it in production.
+  if (import.meta.env.DEV) headers['ngrok-skip-browser-warning'] = 'true';
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   const res = await fetch(`${STS_TOKEN_URL}/token`, {
@@ -82,7 +84,10 @@ export async function requestStsSession(name: string, room?: string): Promise<St
 
 export async function checkStsHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${STS_TOKEN_URL}/health`);
+    const res = await fetch(
+      `${STS_TOKEN_URL}/health`,
+      import.meta.env.DEV ? { headers: { 'ngrok-skip-browser-warning': 'true' } } : undefined,
+    );
     return res.ok;
   } catch {
     return false;

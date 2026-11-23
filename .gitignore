@@ -66,3 +66,7 @@ Thumbs.db
 *.db-shm
 *.sqlite
 .neon
+
+# One-conversation-per-user state (runtime data)
+.sts_used_sessions.json
+.sts_used_sessions.tmp

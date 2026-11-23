@@ -25,6 +25,28 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
+def _float_env(name: str, default: float) -> float:
+    """Read a number env var; a missing or garbled value falls back to the default."""
+    try:
+        return float(os.getenv(name, "").strip() or default)
+    except ValueError:
+        return default
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    """Read a true/false env var. Empty or missing = the default; only an explicit value flips it."""
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _digits_only(value: str) -> str:
+    """A post id is a number. Anything else (typo, URL pasted by mistake) turns the feature off."""
+    value = (value or "").strip()
+    return value if value.isdigit() else ""
+
+
 @dataclass(frozen=True)
 class StsSettings:
     livekit_url: str
@@ -53,6 +75,37 @@ class StsSettings:
     chat_base_url: str = ""
     # Shared secret for Simran's internal calls to rox-partyroom and rox-chat.
     simran_internal_secret: str = ""
+    # Head start: the app calls POST /prewarm when the user taps "join", so Simran is already in the
+    # room (and her Gemini session is ready) while the page loads. OFF by default.
+    prewarm_enabled: bool = False
+    # If nobody joins a pre-warmed room within this many seconds, Simran leaves (saves Gemini cost).
+    prewarm_idle_sec: int = 20
+    # One conversation per user: once Simran has talked to a user, coming back shows "session expired".
+    single_session_per_user: bool = False
+    # Final handoff: at the end of the conversation Simran signs off and the app opens this duet POST
+    # (a RoxStar post id, e.g. Harshit singing "Tum Hi Ho"). Empty = feature OFF (normal duet pitch).
+    # The id is per environment (production and staging have different posts), so it lives in the env.
+    duet_post_id: str = ""
+    duet_host_name: str = "Harshit"
+    duet_song_title: str = "Tum Hi Ho"
+    # --- Protection for the text-chat endpoint and LiveKit calls (safe defaults; each has an off switch) ---
+    # The text-chat endpoint refuses every request while SIMRAN_INTERNAL_SECRET is unset. Set false ONLY to get
+    # the old "open when no secret" behaviour back (for example an isolated local lab).
+    require_internal_secret: bool = True
+    # Overall time for one Gemini text reply, retries included, in seconds. 0 = no timeout. rox-chat waits the
+    # same 20 s (SIMRAN_HTTP_TIMEOUT_MS), so the engine keeps a small margin back and answers just before it.
+    chat_timeout_sec: float = 20.0
+    # Backup model for text replies when the main one is overloaded or out of quota. "off" = no backup.
+    chat_fallback_model: str = "gemini-3.1-flash-lite"
+    # Open the Gemini connection at start-up so the first user does not pay for it.
+    chat_warmup: bool = True
+    # Text replies being generated at the same moment. More get a quick "busy" (rox-chat then uses its own
+    # fallback). 0 = no cap.
+    chat_max_concurrent: int = 32
+    # Text replies per user per minute. 0 = no limit.
+    chat_replies_per_min: int = 30
+    # Time one LiveKit job (and the wait for the global dispatch lock) may take, in seconds. 0 = no timeout.
+    livekit_timeout_sec: float = 8.0
 
     @property
     def is_roxstar_mode(self) -> bool:
@@ -91,4 +144,17 @@ class StsSettings:
             partyroom_base_url=os.getenv("PARTYROOM_BASE_URL", "").strip().rstrip("/"),
             chat_base_url=os.getenv("CHAT_BASE_URL", "").strip().rstrip("/"),
             simran_internal_secret=os.getenv("SIMRAN_INTERNAL_SECRET", "").strip(),
+            prewarm_enabled=os.getenv("STS_PREWARM_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"},
+            prewarm_idle_sec=max(5, _int_env("STS_PREWARM_IDLE_SEC", 20)),
+            single_session_per_user=os.getenv("STS_SINGLE_SESSION_PER_USER", "false").strip().lower() in {"1", "true", "yes", "on"},
+            duet_post_id=_digits_only(os.getenv("STS_DUET_POST_ID", "")),
+            duet_host_name=os.getenv("STS_DUET_HOST_NAME", "Harshit").strip() or "Harshit",
+            duet_song_title=os.getenv("STS_DUET_SONG_TITLE", "Tum Hi Ho").strip() or "Tum Hi Ho",
+            require_internal_secret=_bool_env("STS_REQUIRE_INTERNAL_SECRET", True),
+            chat_timeout_sec=_float_env("STS_CHAT_TIMEOUT_SEC", 20.0),
+            chat_fallback_model=os.getenv("STS_CHAT_FALLBACK_MODEL", "gemini-3.1-flash-lite").strip(),
+            chat_warmup=_bool_env("STS_CHAT_WARMUP", True),
+            chat_max_concurrent=_int_env("STS_CHAT_MAX_CONCURRENT", 32),
+            chat_replies_per_min=_int_env("STS_CHAT_REPLIES_PER_MIN", 30),
+            livekit_timeout_sec=_float_env("STS_LIVEKIT_TIMEOUT_SEC", 8.0),
         )

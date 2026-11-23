@@ -68,7 +68,14 @@ class FakeLiveKit:
         self.created_rooms: list = []
         self.created_dispatches: list = []
 
+        self.list_dispatch_calls: list[str] = []
+
         async def list_dispatch(room_name):
+            # Real LiveKit takes ~3 s and then errors for a room that was never created, so the
+            # server must not ask. The fake fails loudly if it does.
+            self.list_dispatch_calls.append(room_name)
+            if room_name not in self.rooms:
+                raise AssertionError(f"list_dispatch called for a room that does not exist: {room_name}")
             return list(self.dispatches)
 
         async def create_dispatch(req):
@@ -79,9 +86,21 @@ class FakeLiveKit:
 
         async def create_room(req):
             self.created_rooms.append(req)
+            if req.name not in self.rooms:
+                self.rooms.append(req.name)
 
         self.agent_dispatch = SimpleNamespace(list_dispatch=list_dispatch, create_dispatch=create_dispatch)
-        self.room = SimpleNamespace(list_rooms=list_rooms, create_room=create_room)
+        self.room_metadata_updates: list = []
+        self.fail_metadata = False
+
+        async def update_room_metadata(req):
+            if self.fail_metadata:
+                raise RuntimeError("livekit hiccup")
+            self.room_metadata_updates.append(req)
+
+        self.room = SimpleNamespace(
+            list_rooms=list_rooms, create_room=create_room, update_room_metadata=update_room_metadata
+        )
 
 
 def _settings(**over) -> StsSettings:
@@ -228,8 +247,16 @@ def test_refresh_or_double_tap_does_not_send_a_second_simran(server):
     assert len(server.lk.created_dispatches) == 1  # still just ONE
 
 
+def test_a_brand_new_user_never_triggers_the_slow_dispatch_lookup(server):
+    """LiveKit needs ~3 s to answer for a room that does not exist. New users must skip that call."""
+    assert server.call(token=_login(77))[0] == 200
+    assert server.lk.list_dispatch_calls == []
+    assert len(server.lk.created_dispatches) == 1
+
+
 def test_a_ticket_not_yet_picked_up_also_counts_as_live(server):
-    server.lk.dispatches = [SimpleNamespace(agent_name=AGENT, room="r", state=SimpleNamespace(deleted_at=0, jobs=[]))]
+    server.lk.rooms = ["sts-simran-42"]  # the user's room already exists
+    server.lk.dispatches =[SimpleNamespace(agent_name=AGENT, room="r", state=SimpleNamespace(deleted_at=0, jobs=[]))]
     server.call(token=_login(42))
     assert server.lk.created_dispatches == []
 
@@ -337,3 +364,200 @@ def test_standalone_mode_is_untouched_by_all_of_this(server, monkeypatch):
     monkeypatch.setattr(token_server, "ensure_room_and_dispatch", lambda *a, **k: asyncio.sleep(0))
     status, body = server.call(body={"name": "Rahul"}, token=None)
     assert status == 200 and body["room"].startswith("sts-simran-")
+
+
+# --------------------------------- early start (/prewarm) ---------------------------------
+
+def test_prewarm_is_off_by_default(server):
+    status, _ = server.call("/prewarm", token=_login(42))
+    assert status == 404
+    assert server.lk.created_dispatches == [] and server.lk.created_rooms == []
+
+
+def test_prewarm_needs_a_real_login(server):
+    server.use(_settings(prewarm_enabled=True))
+    status, body = server.call("/prewarm", token=None)
+    assert status == 401 and body == {"error": "unauthorized"}
+    assert server.lk.created_dispatches == []
+
+
+def test_prewarm_gets_simran_ready_in_the_users_own_room_without_a_token(server):
+    server.use(_settings(prewarm_enabled=True))
+    status, body = server.call("/prewarm", token=_login(42))
+    assert status == 202 and body == {"status": "started"}
+    assert "token" not in body
+    assert [d.room for d in server.lk.created_dispatches] == ["sts-simran-42"]
+    assert server.tokens == []  # no LiveKit token is minted here
+    assert server.notified == []  # the popup is cancelled by the real /token call, not by this
+
+
+def test_the_real_join_after_prewarm_reuses_the_same_simran_and_one_allowance(server):
+    server.use(_settings(prewarm_enabled=True, user_sessions_per_hour=1))
+    token_server._session_limiter = SessionRateLimiter(1, 3600)
+    assert server.call("/prewarm", token=_login(42))[1] == {"status": "started"}
+    # Simran is now live in the room. The user's real /token call must not send a second one.
+    server.lk.dispatches = [_dispatch(token_server.api.JobStatus.JS_RUNNING)]
+    status, body = server.call("/token", token=_login(42))
+    assert status == 200 and body["room"] == "sts-simran-42"
+    assert len(server.lk.created_dispatches) == 1
+
+
+def test_tapping_twice_does_not_send_two_simrans(server):
+    server.use(_settings(prewarm_enabled=True))
+    server.call("/prewarm", token=_login(42))
+    server.lk.dispatches = [_dispatch(token_server.api.JobStatus.JS_RUNNING)]
+    status, body = server.call("/prewarm", token=_login(42))
+    assert status == 202 and body == {"status": "reused"}
+    assert len(server.lk.created_dispatches) == 1
+
+
+def test_prewarm_respects_the_capacity_cap(server):
+    server.use(_settings(prewarm_enabled=True, max_concurrent_sessions=1))
+    server.lk.rooms = ["sts-simran-7"]
+    status, body = server.call("/prewarm", token=_login(42))
+    assert status == 202 and body == {"status": "busy"}
+    assert server.lk.created_dispatches == []
+
+
+def test_standalone_prewarm_without_a_room_name_does_nothing(server):
+    server.use(_settings(prewarm_enabled=True, auth_mode="standalone"))
+    status, _ = server.call("/prewarm", token=_login(42))
+    assert status == 400
+    assert server.lk.created_dispatches == []
+
+
+def test_standalone_prewarm_is_off_unless_switched_on(server):
+    server.use(_settings(prewarm_enabled=False, auth_mode="standalone"))
+    status, _ = server.call("/prewarm", body={"room": "sts-simran-42"})
+    assert status == 404
+    assert server.lk.created_dispatches == []
+
+
+def test_token_call_tells_a_waiting_simran_the_user_is_arriving(server):
+    server.use(_settings(prewarm_enabled=True))
+    server.call("/prewarm", token=_login(42))
+    server.lk.dispatches = [_dispatch(token_server.api.JobStatus.JS_RUNNING)]
+    status, _ = server.call("/token", token=_login(42))
+    assert status == 200
+    assert len(server.lk.room_metadata_updates) == 1
+    update = server.lk.room_metadata_updates[0]
+    assert update.room == "sts-simran-42"
+    stamp = json.loads(update.metadata)["user_arriving"]
+    assert abs(time.time() - stamp) < 30  # a fresh timestamp, so an old note from a past visit never counts
+
+
+def test_no_arriving_note_when_early_start_is_off(server):
+    assert server.call("/token", token=_login(42))[0] == 200
+    assert server.lk.room_metadata_updates == []
+
+
+def test_a_failed_arriving_note_never_blocks_the_user(server):
+    server.use(_settings(prewarm_enabled=True))
+    server.lk.fail_metadata = True
+    status, body = server.call("/token", token=_login(42))
+    assert status == 200 and body["token"] == "lk-token"
+
+
+# --------------------------------- early start in standalone (lab) mode ---------------------------------
+
+def test_standalone_prewarm_sends_simran_to_the_named_room(server):
+    server.use(_settings(prewarm_enabled=True, auth_mode="standalone"))
+    status, body = server.call("/prewarm", body={"room": "sts-simran-42"})
+    assert status == 202 and body == {"status": "started"}
+    assert [d.room for d in server.lk.created_dispatches] == ["sts-simran-42"]
+
+
+def test_standalone_prewarm_rejects_a_bad_room_name(server):
+    server.use(_settings(prewarm_enabled=True, auth_mode="standalone"))
+    for bad in ("", "A B", "../x", "x" * 80):
+        assert server.call("/prewarm", body={"room": bad})[0] == 400
+    assert server.lk.created_dispatches == []
+
+
+def test_standalone_join_after_prewarm_does_not_send_a_second_simran(server):
+    server.use(_settings(prewarm_enabled=True, auth_mode="standalone"))
+    server.call("/prewarm", body={"room": "sts-simran-42"})
+    server.lk.dispatches = [_dispatch(token_server.api.JobStatus.JS_RUNNING)]
+    status, body = server.call("/token", body={"name": "Rahul", "room": "sts-simran-42"})
+    assert status == 200
+    assert len(server.lk.created_dispatches) == 1
+    assert len(server.lk.room_metadata_updates) == 1  # "user is arriving" note
+
+
+def test_standalone_new_room_never_asks_about_agents_before_it_exists(server):
+    """Same ~3 s trap as the login path: the room must be created before we ask what is in it."""
+    server.use(_settings(auth_mode="standalone"))
+    assert server.call("/token", body={"name": "Rahul", "room": "sts-simran-77"})[0] == 200
+    assert len(server.lk.created_dispatches) == 1  # the fake raises if asked about a room that does not exist yet
+
+
+# --------------------------------- one conversation per user ("session expired") ---------------------------------
+
+@pytest.fixture
+def used_file(tmp_path, monkeypatch):
+    from sts_lab import session_gate
+    path = tmp_path / "used.json"
+    monkeypatch.setattr(session_gate, "DEFAULT_FILE", path)
+    monkeypatch.setattr(token_server, "SessionGate", lambda enabled: session_gate.SessionGate(enabled, path))
+    return path
+
+
+def test_a_used_conversation_gets_session_expired_and_no_simran(server, used_file):
+    from sts_lab.session_gate import SessionGate
+    server.use(_settings(single_session_per_user=True))
+    SessionGate(True, used_file).mark_used("sts-simran-42")
+    status, body = server.call("/token", token=_login(42))
+    assert status == 410 and body == {"error": "session_expired"}
+    assert server.lk.created_dispatches == [] and server.lk.created_rooms == []
+    assert server.tokens == []  # no way into the room
+
+
+def test_other_users_are_not_affected(server, used_file):
+    from sts_lab.session_gate import SessionGate
+    server.use(_settings(single_session_per_user=True))
+    SessionGate(True, used_file).mark_used("sts-simran-42")
+    assert server.call("/token", token=_login(43))[0] == 200
+
+
+def test_switch_off_means_everybody_can_come_back(server, used_file):
+    from sts_lab.session_gate import SessionGate
+    SessionGate(True, used_file).mark_used("sts-simran-42")
+    server.use(_settings(single_session_per_user=False))
+    assert server.call("/token", token=_login(42))[0] == 200
+
+
+def test_prewarm_does_not_start_simran_for_an_expired_user(server, used_file):
+    from sts_lab.session_gate import SessionGate
+    server.use(_settings(prewarm_enabled=True, single_session_per_user=True))
+    SessionGate(True, used_file).mark_used("sts-simran-42")
+    status, body = server.call("/prewarm", token=_login(42))
+    assert status == 202 and body == {"status": "expired"}
+    assert server.lk.created_dispatches == []
+
+
+def test_standalone_mode_also_expires_user_rooms(server, used_file):
+    from sts_lab.session_gate import SessionGate
+    server.use(_settings(auth_mode="standalone", single_session_per_user=True, prewarm_enabled=True))
+    SessionGate(True, used_file).mark_used("sts-simran-42")
+    assert server.call("/token", body={"name": "R", "room": "sts-simran-42"})[0] == 410
+    assert server.call("/prewarm", body={"room": "sts-simran-42"})[1] == {"status": "expired"}
+    assert server.lk.created_dispatches == []
+    # a lab room is never limited
+    assert server.call("/token", body={"name": "R", "room": "sts-simran-ab3k"})[0] == 200
+
+
+def test_preflight_allows_the_dev_tunnel_header(server):
+    """A page on another origin (dev tunnel) sends ngrok-skip-browser-warning; the preflight must allow it."""
+    conn = http.client.HTTPConnection("127.0.0.1", server.httpd.server_port, timeout=5)
+    conn.request("OPTIONS", "/token", headers={
+        "Origin": "http://localhost:5175",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type,authorization,ngrok-skip-browser-warning",
+    })
+    resp = conn.getresponse()
+    resp.read()
+    allowed = (resp.getheader("Access-Control-Allow-Headers") or "").lower()
+    conn.close()
+    assert resp.status == 204
+    for name in ("content-type", "authorization", "ngrok-skip-browser-warning"):
+        assert name in allowed

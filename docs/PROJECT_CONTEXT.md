@@ -6,18 +6,6 @@
 
 ---
 
-## Quick summary (read this first; the rest is detail)
-
-- **What**: Simran is a 22-year-old Delhi music-host voice companion for RoxStar. She talks to a new user once, then hands them to a duet or solo recording.
-- **Voice path**: browser or app WebView -> `token_server.py` (:8001, mints a LiveKit token and sends the agent) -> `worker.py` (LiveKit agent, Gemini Live speech-to-speech) -> audio and data packets back to the web stage.
-- **Chat path**: rox-chat calls `POST /api/simran/chat-reply` -> `text_chat.py` (Gemini Flash Lite, JSON reply plus a join-card flag) with canned fallbacks.
-- **Modes**: standalone lab (anyone, room code) and `STS_AUTH_MODE=roxstar` (RoxStar login, private room `sts-simran-<userID>`, capacity and hourly limits).
-- **Flags (all off by default)**: `STS_PREWARM_ENABLED` (early start), `STS_SINGLE_SESSION_PER_USER` (one conversation each), `STS_DUET_POST_ID` (final duet handoff).
-- **Key files**: `prompt.py` (persona), `onboarding.py` (state, duet registry), `session_gate.py`, `session_limits.py`, `config.py`, `web/src/simran/SimranWebViewPage.tsx` (app page).
-- **Verify**: `py -m pytest tests/ -v` and `npm --prefix web run build`.
-
----
-
 ## 1. Project Purpose & Primary Functionality
 
 **STS Lab** is a high-performance, low-latency AI Voice Companion prototype built for **RoxStar**, an India-born social singing and karaoke platform.
@@ -38,7 +26,7 @@ The system powers **Simran**, a 22-year-old female music host and digital compan
 | **Frontend UI** | React 19, TypeScript, Vite 8 | Two-pane interactive studio stage, audio visualizers, and state badges |
 | **Frontend Media** | `livekit-client` (2.22+) | WebRTC audio track publishing, audio level analysis, and data listener |
 | **Persistence** | SQLAlchemy (SQLite / PostgreSQL) in `db/`, plus local JSON (`.sts_users.json`) | Conversation/session recording, admin analytics, and returning user profile memory |
-| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 170 unit, scenario, persistence and RoxStar-integration tests |
+| **Test Suite** | Pytest 9.x, `pytest-asyncio`, `anyio` | 64 unit, scenario and persistence tests |
 
 ---
 
@@ -95,7 +83,7 @@ flowchart TD
    - Listens on `STS_HOST:STS_PORT` (default `0.0.0.0:8001`; `PORT` overrides the port).
    - Endpoints:
      - `GET /health` & `GET /`: Healthcheck returning service state, model, and active voice.
-     - `GET /duets`: Lab only. Lists demo duet rooms; returns 404 when `STS_AUTH_MODE=roxstar`.
+     - `GET /duets`: Lists active duet rooms from the registry.
      - `POST /token`: Concurrently provisions the LiveKit room (`ensure_room_and_dispatch`) and issues a signed JWT token with a 2-hour TTL.
      - `POST /rooms`: Creates a unique room code (`sts-simran-xxxx`).
 
@@ -286,26 +274,6 @@ Stored in `.env` (copy from [`.env.example`](file:///y:/roxstar/sts_lab/.env.exa
 
 - **Single Active Agent Per Room**: The worker runs as a dedicated agent per room. Multi-bot conversations (e.g. Kabir + Simran simultaneously) require the legacy cascade setup or multi-worker routing.
 - **Local JSON Store**: Returning-user profiles are still saved in `.sts_users.json` on local disk; conversation history lives in the `db/` SQL database (SQLite by default, PostgreSQL via `DATABASE_URL`). Unifying the two is a production follow-up.
-- **Duet Registry**: In lab mode `DuetRoomRegistry` still holds mock rooms (Aman, Rhea, Kabir). With `STS_AUTH_MODE=roxstar` it starts empty and only offers rooms fetched live from rox-partyroom (`PARTYROOM_BASE_URL`); if that is unreachable Simran offers solo recording. The partyroom endpoint (`GET /v1/internal/partyroom/active-duets`) is built in the next phase, so until then RoxStar mode offers solo only.
+- **Static Duet Registry**: Duet rooms are currently populated in-memory in `DuetRoomRegistry` with mock hosts (Aman, Rhea, Kabir); production requires connecting to RoxStar's live backend room service.
 - **Windows Command Convention**: On Windows systems without a virtualenv added to PATH, execute Python commands using `py -m pytest` or `py run_sts.py`.
 
-
----
-
-## 11. RoxStar Integration Mode (`STS_AUTH_MODE=roxstar`)
-
-Added on branch `feat/integrate-simran-onboarding`. Off by default; the lab described above is unchanged when the variable is unset.
-
-**In simple words:** inside the RoxStar app, Simran opens in a WebView (`/simran`). Every user gets a private voice session, so nobody waits for her. There is no real party room behind the screen.
-
-| Concern | How it works |
-| :--- | :--- |
-| Who is the user | The app sends the user's RoxStar access token as `Authorization: Bearer`. `roxstar_auth.py` verifies it (HS256, `JWT_API_KEY`, `exp` required, `type` must be `access`, id from the `userID` claim). |
-| Which room | Always `sts-simran-<userID>`, chosen by the server. A room sent by the browser is ignored. LiveKit identity is `rx-<userID>`. |
-| Refresh / double tap | The server checks the room's agent dispatches and re-uses a running Simran instead of sending a second one. |
-| Cost limits | `STS_MAX_CONCURRENT_SESSIONS` (503 `busy`), `STS_USER_SESSIONS_PER_HOUR` (429 `rate_limited`, in `session_limits.py`, in-memory so valid for ONE token-server process), `STS_MAX_SESSION_SEC` (Simran wraps up; forced off 60 s later). |
-| Duets | `DuetRoomRegistry(strict=True)` + `rox_services.fetch_active_duets` (2 s timeout, 60 s cache). Only ids from the live list are accepted. |
-| Popup cancel | After a token is issued, `rox_services.notify_session_started_async` tells rox-chat (background, best effort). |
-| Page to app messages | `simran.ready`, `simran.close {destination: duet / solo / none, room_id, song_title, reason}` (see `web/src/bridge.ts`). App to page: `auth`, `app.background`, `app.foreground`. |
-
-Still open (see the plan in the workspace root): how the token reaches the WebView, where this is hosted, real coin credit (coins are static), the partyroom and chat endpoints, and the AI-disclosure / voice-data decisions.

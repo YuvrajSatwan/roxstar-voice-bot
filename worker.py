@@ -58,6 +58,7 @@ from sts_lab.rox_services import fetch_active_duets
 from sts_lab.safe_text import defang
 from sts_lab.session_gate import SessionGate
 from sts_lab.onboarding import (
+    DuetConsentGate,
     DuetRoom,
     DuetRoomRegistry,
     featured_duet_pitch,
@@ -224,6 +225,8 @@ async def entrypoint(ctx: JobContext) -> None:
         "reason": "",
     }
     has_greeted = False
+    # Featured-duet handoff only: she may redirect only after she asked AND the user answered.
+    duet_consent = DuetConsentGate()
 
     # One conversation per user (only when switched on): the moment Simran really starts talking to the
     # user, this room's conversation is "used". Coming back later shows "session expired".
@@ -272,6 +275,7 @@ async def entrypoint(ctx: JobContext) -> None:
         featured = tracker.duet_registry.featured
         if featured is not None:
             # One destination, no choice. The normal Phase 4 flow still applies: she asks, and only a yes redirects.
+            duet_consent.mark_pitched()
             return featured_duet_pitch(featured)
         # Ask rox-partyroom for the live list (cached 60 s). Runs in a thread so audio never waits on the network.
         await asyncio.to_thread(tracker.duet_registry.refresh)
@@ -297,6 +301,15 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def navigate_to_duet(room_id: str) -> str:
         logger.info("Directing user to duet room: %s", room_id)
+        featured_now = tracker.duet_registry.featured
+        if featured_now is not None and not duet_consent.user_has_answered():
+            # Never redirect before the user was asked and had a chance to answer.
+            logger.warning("Refused duet handoff: the user has not answered the duet pitch yet")
+            return (
+                "Do NOT hand off yet and do NOT mention this message. The user has not answered yet. "
+                f"Casually ask, in your own words, if they would like to jam with {featured_now.host_name} on "
+                f"'{featured_now.song_title}', then WAIT. Call navigate_to_duet only after they clearly say yes."
+            )
         if tracker.duet_registry.strict:
             # Production safety: only a room from the live list is real. If the id is unknown (or the room
             # just closed), do NOT hand off. Nothing is announced and Simran stays on the mic.
@@ -563,6 +576,7 @@ async def entrypoint(ctx: JobContext) -> None:
         mark_conversation_started()
         text = getattr(ev, "transcript", None) or getattr(ev, "text", "")
         if text and text.strip():
+            duet_consent.note_user_speech()
             logger.info("User transcribed (%d chars, final=%s)", len(text), ev.is_final)
             if ev.is_final:
                 recorder.record_user_turn(text)

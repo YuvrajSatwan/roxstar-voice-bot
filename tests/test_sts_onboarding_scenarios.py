@@ -204,6 +204,36 @@ def test_scenario_9_no_duet_rooms_available() -> None:
     assert "suggest recording solo" in (event_hint or "")
 
 
+def test_featured_duet_redirects_only_after_pitch_and_user_answer() -> None:
+    """The featured duet handoff is allowed only after the pitch AND a user reply; the post id is always the featured one."""
+    from sts_lab.onboarding import DuetConsentGate
+
+    featured = DuetRoom(
+        room_id="post-4", title="Tum Hi Ho duet", genre="Bollywood",
+        host_name="dixitAkbari007", song_title="Tum Hi Ho", post_id="4",
+    )
+    registry = DuetRoomRegistry(featured=featured)
+    gate = DuetConsentGate()
+
+    # Not pitched yet: user speech before the pitch does not count, so no redirect.
+    gate.note_user_speech()
+    assert not gate.user_has_answered()
+
+    # Pitched but the user has not answered: still no redirect.
+    gate.mark_pitched()
+    assert not gate.user_has_answered()
+
+    # The user answers after the pitch: redirect allowed, and it goes to the featured post whatever id the model passes.
+    gate.note_user_speech()
+    assert gate.user_has_answered()
+    room = registry.get_room("some-wrong-id")
+    assert room is featured and room.post_id == "4"
+
+    # A fresh pitch resets the wait: the user must answer again.
+    gate.mark_pitched()
+    assert not gate.user_has_answered()
+
+
 def test_scenario_10_user_asking_free_coins() -> None:
     """10. A user asking how to earn free coins."""
     profile = UserDiscoveryProfile(user_id="user_coins")

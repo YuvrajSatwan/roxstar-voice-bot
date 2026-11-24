@@ -242,6 +242,33 @@ def featured_duet_pitch(room: DuetRoom) -> str:
     )
 
 
+class DuetConsentGate:
+    """Code-level "the user must agree first" check for the featured duet handoff.
+
+    In simple words: the prompt already tells Simran to redirect only after a clear yes. This makes it a
+    hard rule too. She may only redirect if (1) she has pitched the duet and (2) the user has said
+    something since. Whether that something is a yes stays with the model; this stops a redirect
+    that happens before the user was ever asked or got a chance to answer.
+    """
+
+    def __init__(self) -> None:
+        self.pitched = False
+        self.replies_since_pitch = 0
+
+    def mark_pitched(self) -> None:
+        """The duet was offered to the user. Their answer must come AFTER this."""
+        self.pitched = True
+        self.replies_since_pitch = 0
+
+    def note_user_speech(self) -> None:
+        """The user spoke (any transcript of their voice). Counts only once the duet was pitched."""
+        if self.pitched:
+            self.replies_since_pitch += 1
+
+    def user_has_answered(self) -> bool:
+        return self.pitched and self.replies_since_pitch > 0
+
+
 class DuetRoomRegistry:
     """Registry of live duet rooms so Simran only suggests REAL available rooms."""
 

@@ -370,8 +370,8 @@ class StsTokenHandler(BaseHTTPRequestHandler):
             return
         elif self.path == "/duets":
             if self.settings.is_roxstar_mode:
-                # Production never shows the built-in demo rooms. Real rooms come from rox-partyroom via the worker.
-                self._send_json(HTTPStatus.OK, {"duets": []})
+                # Production has no demo-room list at all (lab only). Real rooms come from rox-partyroom via the worker.
+                self._send_json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
                 return
             from sts_lab.onboarding import DuetRoomRegistry
             registry = DuetRoomRegistry()

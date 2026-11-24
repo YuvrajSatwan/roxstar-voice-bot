@@ -95,7 +95,7 @@ flowchart TD
    - Listens on `STS_HOST:STS_PORT` (default `0.0.0.0:8001`; `PORT` overrides the port).
    - Endpoints:
      - `GET /health` & `GET /`: Healthcheck returning service state, model, and active voice.
-     - `GET /duets`: Lists active duet rooms from the registry.
+     - `GET /duets`: Lab only. Lists demo duet rooms; returns 404 when `STS_AUTH_MODE=roxstar`.
      - `POST /token`: Concurrently provisions the LiveKit room (`ensure_room_and_dispatch`) and issues a signed JWT token with a 2-hour TTL.
      - `POST /rooms`: Creates a unique room code (`sts-simran-xxxx`).
 

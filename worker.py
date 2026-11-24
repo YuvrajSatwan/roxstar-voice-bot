@@ -40,7 +40,7 @@ from livekit.agents import (
 )
 from livekit.agents.metrics.base import RealtimeModelMetrics
 from livekit.agents.voice import Agent, AgentSession
-from livekit.agents.voice.room_io import RoomOutputOptions
+from livekit.agents.voice.room_io import RoomInputOptions, RoomOutputOptions
 from livekit.agents.voice.events import (
     AgentStateChangedEvent,
     ConversationItemAddedEvent,
@@ -54,8 +54,14 @@ from sts_lab.prompt import (
     SIMRAN_ONBOARDING_SYSTEM_PROMPT,
 )
 from sts_lab.db import create_recorder
+from sts_lab.rox_services import fetch_active_duets
+from sts_lab.safe_text import defang
+from sts_lab.session_gate import SessionGate
 from sts_lab.onboarding import (
+    DuetConsentGate,
+    DuetRoom,
     DuetRoomRegistry,
+    featured_duet_pitch,
     OnboardingTracker,
     UserDiscoveryProfile,
     UserProfileStore,
@@ -90,16 +96,28 @@ async def entrypoint(ctx: JobContext) -> None:
     logger.info("Connecting to room: %s", ctx.room.name)
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    await ctx.room.local_participant.set_name("Simran")
-    await ctx.room.local_participant.set_attributes({
-        "roxstar.role": "bot",
-        "roxstar.persona": "sathi",
-        "roxstar.mode": "sts",
-        "roxstar.model": settings.model,
-        "roxstar.voice": settings.voice,
-    })
-
     background_tasks: set[asyncio.Task[None]] = set()
+
+    # Name + attributes are sent to the server right away, but the SDK then WAITS for an
+    # acknowledgement (up to 5 s EACH) that LiveKit Cloud does not send. Awaiting them here
+    # delayed Simran's first word by ~10 s. They run in the background instead: the update is
+    # still sent immediately and nothing else depends on the reply.
+    async def announce_bot_identity() -> None:
+        try:
+            await ctx.room.local_participant.set_name("Simran")
+            await ctx.room.local_participant.set_attributes({
+                "roxstar.role": "bot",
+                "roxstar.persona": "sathi",
+                "roxstar.mode": "sts",
+                "roxstar.model": settings.model,
+                "roxstar.voice": settings.voice,
+            })
+        except Exception as exc:  # cosmetic metadata; never block or break the session
+            logger.warning("Could not set bot name/attributes: %s", exc)
+
+    identity_task = asyncio.create_task(announce_bot_identity())
+    background_tasks.add(identity_task)
+    identity_task.add_done_callback(background_tasks.discard)
 
     def publish_data(payload: dict[str, object]) -> None:
         raw = json.dumps({"timestamp": time.time(), **payload})
@@ -112,12 +130,43 @@ async def entrypoint(ctx: JobContext) -> None:
     # Initialize fresh Onboarding Tracker & Profile Store
     store = UserProfileStore()
     initial_user = "Guest"
-    for p in ctx.room.remote_participants.values():
-        if is_human_participant(p):
-            initial_user = p.identity or p.name or "Guest"
-            break
+    # RoxStar rooms are named sts-simran-<user id> and the user joins as rx-<user id>. The worker can be
+    # ready BEFORE the user has joined (it is much faster now, and with the early start it is meant to
+    # be), so take the identity from the room name instead of from whoever happens to be in the room.
+    if settings.is_roxstar_mode or settings.prewarm_enabled:
+        room_match = re.fullmatch(r"sts-simran-(\d+)", ctx.room.name or "")
+        if room_match:
+            initial_user = f"rx-{room_match.group(1)}"
+    if initial_user == "Guest":
+        for p in ctx.room.remote_participants.values():
+            if is_human_participant(p):
+                initial_user = p.identity or p.name or "Guest"
+                break
     profile = UserDiscoveryProfile(user_id=initial_user)
-    tracker = OnboardingTracker(profile=profile, store=store)
+
+    # RoxStar mode: Simran may only send people to duet rooms that REALLY exist right now
+    # (fetched live from rox-partyroom). Lab mode keeps the old built-in demo rooms.
+    duet_registry: DuetRoomRegistry | None = None
+    # Final handoff (feature flag = STS_DUET_POST_ID): when set, the ONE destination is that duet post.
+    featured_duet: DuetRoom | None = None
+    if settings.duet_post_id:
+        featured_duet = DuetRoom(
+            room_id=f"post-{settings.duet_post_id}",
+            title=f"{settings.duet_song_title} duet",
+            genre="Bollywood",
+            host_name=settings.duet_host_name,
+            song_title=settings.duet_song_title,
+            post_id=settings.duet_post_id,
+        )
+    if settings.is_roxstar_mode:
+        duet_registry = DuetRoomRegistry(
+            strict=True,
+            fetcher=lambda: fetch_active_duets(settings.partyroom_base_url, settings.simran_internal_secret),
+            featured=featured_duet,
+        )
+    elif featured_duet is not None:
+        duet_registry = DuetRoomRegistry(featured=featured_duet)
+    tracker = OnboardingTracker(profile=profile, store=store, duet_registry=duet_registry)
     logger.info("Initialized fresh OnboardingTracker for new visitor user=%s", tracker.profile.user_id)
 
     # Non-blocking conversation persistence: every call below only enqueues work,
@@ -127,10 +176,46 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     recorder.start()
 
+    def has_humans() -> bool:
+        return any(is_human_participant(p) for p in ctx.room.remote_participants.values())
+
+    # Set the moment a real user is in the room. Simran may get ready before that (early start),
+    # but she only speaks once somebody is there to hear her.
+    human_arrived = asyncio.Event()
+    # True when the token server told us (room metadata) that the user is about to join. Then we can
+    # start speaking at once: generating the first line takes about as long as the user needs to connect.
+    user_signalled = False
+
+    def room_says_user_arriving(metadata: str | None) -> bool:
+        # The note carries the time it was written. A room lives a few minutes after a conversation, so
+        # an OLD note from the user's previous visit must not count as "the user is arriving now".
+        try:
+            stamp = float(json.loads(metadata or "{}").get("user_arriving") or 0)
+        except (ValueError, TypeError, AttributeError):
+            return False
+        return 0 < time.time() - stamp < 30.0
+
+    if has_humans():
+        human_arrived.set()
+    elif room_says_user_arriving(ctx.room.metadata):
+        user_signalled = True
+        human_arrived.set()
+
+    @ctx.room.on("room_metadata_changed")
+    def on_room_metadata_changed(old_metadata: str, new_metadata: str) -> None:
+        nonlocal user_signalled
+        if room_says_user_arriving(new_metadata) and not human_arrived.is_set():
+            logger.info("Token server says the user is arriving in room %s", ctx.room.name)
+            user_signalled = True
+            human_arrived.set()
+
     @ctx.room.on("participant_connected")
     def on_participant_connected(p: rtc.RemoteParticipant) -> None:
-        if is_human_participant(p) and p.identity:
-            recorder.set_identity(p.identity)
+        if is_human_participant(p):
+            logger.info("User %s joined room %s", p.identity, ctx.room.name)
+            human_arrived.set()
+            if p.identity:
+                recorder.set_identity(p.identity)
 
     # State tracking for Simran sign-off and turning off the bot
     sign_off_state = {
@@ -140,6 +225,19 @@ async def entrypoint(ctx: JobContext) -> None:
         "reason": "",
     }
     has_greeted = False
+    # Featured-duet handoff only: she may redirect only after she asked AND the user answered.
+    duet_consent = DuetConsentGate()
+
+    # One conversation per user (only when switched on): the moment Simran really starts talking to the
+    # user, this room's conversation is "used". Coming back later shows "session expired".
+    session_gate = SessionGate(settings.single_session_per_user)
+
+    def mark_conversation_started() -> None:
+        try:
+            if session_gate.mark_used(ctx.room.name):
+                logger.info("Conversation started in %s: this user's one session is now used", ctx.room.name)
+        except Exception as exc:  # never let bookkeeping break the conversation
+            logger.warning("Could not record the used session: %s", exc)
 
     # Tools definition for Simran
     @llm.function_tool(
@@ -174,8 +272,20 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def check_available_duets(genre: str | None = None) -> str:
         recorder.set_stage(4)  # the duet pitch (Phase 4) has been reached
+        featured = tracker.duet_registry.featured
+        if featured is not None:
+            # One destination, no choice. The normal Phase 4 flow still applies: she asks, and only a yes redirects.
+            duet_consent.mark_pitched()
+            return featured_duet_pitch(featured)
+        # Ask rox-partyroom for the live list (cached 60 s). Runs in a thread so audio never waits on the network.
+        await asyncio.to_thread(tracker.duet_registry.refresh)
         rooms = tracker.duet_registry.list_available(genre)
         if not rooms:
+            if tracker.duet_registry.strict:
+                return (
+                    "No duet rooms are live right now. Do NOT invent or mention any room. "
+                    "Instead, warmly invite them to record a song solo, and use navigate_to_recording if they agree."
+                )
             return "No duet rooms currently available."
         formatted = [
             f"Option {i+1}: {r.host_name} is live singing '{r.song_title}' (Room ID: {r.room_id}, Genre: {r.genre})"
@@ -191,6 +301,25 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     async def navigate_to_duet(room_id: str) -> str:
         logger.info("Directing user to duet room: %s", room_id)
+        featured_now = tracker.duet_registry.featured
+        if featured_now is not None and not duet_consent.user_has_answered():
+            # Never redirect before the user was asked and had a chance to answer.
+            logger.warning("Refused duet handoff: the user has not answered the duet pitch yet")
+            return (
+                "Do NOT hand off yet and do NOT mention this message. The user has not answered yet. "
+                f"Casually ask, in your own words, if they would like to jam with {featured_now.host_name} on "
+                f"'{featured_now.song_title}', then WAIT. Call navigate_to_duet only after they clearly say yes."
+            )
+        if tracker.duet_registry.strict:
+            # Production safety: only a room from the live list is real. If the id is unknown (or the room
+            # just closed), do NOT hand off. Nothing is announced and Simran stays on the mic.
+            await asyncio.to_thread(tracker.duet_registry.refresh)
+            if tracker.duet_registry.get_room(room_id) is None:
+                logger.warning("Refused handoff to unknown or closed duet room %r", room_id)
+                return (
+                    "That room is not available any more. Do NOT mention an error. "
+                    "Casually offer another live room from the list, or invite them to record a song solo instead."
+                )
         recorder.mark_exit("duet_handoff")
         recorder.set_stage(4)
         tracker.save_field("duet_attempted", "true")
@@ -211,6 +340,7 @@ async def entrypoint(ctx: JobContext) -> None:
             "host_name": host_name,
             "song_title": song_title,
             "genre": room_info.genre if room_info else "Bollywood",
+            "post_id": room_info.post_id if room_info else "",
             "message": f"Opening live duet room with {host_name}...",
         })
         publish_data({
@@ -409,9 +539,17 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception as exc:  # never let analytics touch the audio path
             logger.debug("user_state_changed handler error: %s", exc)
 
+    speaking_seen = {"v": False}  # becomes True the first time Simran starts speaking
+
     @session.on("agent_state_changed")
     def on_state(ev: AgentStateChangedEvent) -> None:
         logger.info("Agent state changed: %s", ev.new_state)
+        if ev.new_state == "speaking":
+            if not speaking_seen["v"]:
+                # The conversation has really begun only now, when Simran's first line is playing. Marking it
+                # before (at greeting time) burned the user's one session even when the greeting never came.
+                mark_conversation_started()
+            speaking_seen["v"] = True
         if ev.new_state == "speaking" and speech_end["t"] is not None:
             recorder.record_response_latency((time.monotonic() - speech_end["t"]) * 1000.0)
             speech_end["t"] = None
@@ -435,8 +573,10 @@ async def entrypoint(ctx: JobContext) -> None:
     def on_user_transcribed(ev: UserInputTranscribedEvent) -> None:
         nonlocal has_greeted
         has_greeted = True
+        mark_conversation_started()
         text = getattr(ev, "transcript", None) or getattr(ev, "text", "")
         if text and text.strip():
+            duet_consent.note_user_speech()
             logger.info("User transcribed (%d chars, final=%s)", len(text), ev.is_final)
             if ev.is_final:
                 recorder.record_user_turn(text)
@@ -496,6 +636,9 @@ async def entrypoint(ctx: JobContext) -> None:
                 if text:
                     logger.info("Received user chat text (%d chars)", len(text))
                     recorder.record_user_turn(text)
+                    # What the user typed goes into our instruction line below. Flatten it first so it cannot
+                    # carry its own "[SYSTEM ...]" note (the saved transcript above keeps their exact words).
+                    safe_text = defang(text, 500)
                     if tracker.is_simran_away:
                         lower_text = text.lower()
                         if re.search(r"\b(simran|saara|saraah|kahan|kidhar|back|wapas|aa jao|aa jaao)\b", lower_text):
@@ -509,8 +652,8 @@ async def entrypoint(ctx: JobContext) -> None:
                                 "message": "Simran is back on mic!",
                             })
                             session.generate_reply(
-                                user_input=(
-                                    f"{text}\n[EVENT: You were away for chai/client work and user called you back. "
+                                instructions=(
+                                    f"{safe_text}\n[EVENT: You were away for chai/client work and user called you back. "
                                     f"Return warmly and easily, in your own words, like 'Haan, main aa gayi. Kaisa raha duet?' Keep strictly under 18 words, stay on 'aap'.]"
                                 )
                             )
@@ -532,8 +675,8 @@ async def entrypoint(ctx: JobContext) -> None:
                             "reason": excuse,
                         })
                         session.generate_reply(
-                            user_input=(
-                                f"{text}\n[SYSTEM ALERT - CRITICAL: User has declined/deflected {tracker.action_nudge_count} times! "
+                            instructions=(
+                                f"{safe_text}\n[SYSTEM ALERT - CRITICAL: User has declined/deflected {tracker.action_nudge_count} times! "
                                 f"YOUR VERY NEXT TURN MUST BE YOUR EXIT EXCUSE. Keep it strictly under 25 words! "
                                 f"DO NOT ASK ANY QUESTION! DO NOT CONTINUE SMALL TALK! "
                                 f"React in one short phrase to what they just said, use this authentic excuse: '{excuse}', say goodbye, and exit! "
@@ -542,7 +685,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         )
                     else:
                         session.generate_reply(
-                            user_input=f"{text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question, placed last. Say nothing about yourself unless they asked. Let the topic breathe.]"
+                            instructions=f"{safe_text}\n[SYSTEM: Warm, unhurried, natural. Reply in ONE short turn (12-22 words): a genuine reaction, plus at most one question, placed last. Say nothing about yourself unless they asked. Let the topic breathe.]"
                         )
 
             elif msg_type == "roxstar.set_laugh_mode":
@@ -591,7 +734,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "message": "Simran is back on mic!",
                     })
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             "[EVENT: User just returned from their duet stage session and recalled you. "
                             "Greet them warmly and easily, glad they are back, and ask how the duet went, in your own words, like 'Arre, aap aa gaye! Kaisa raha duet?' "
                             "Keep it strictly under 18 words, stay on 'aap'.]"
@@ -603,7 +746,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     logger.info("Dispatching contextual tooltip: %s", tooltip["id"])
                     publish_data({"type": "roxstar.tooltip", **tooltip})
                 if hint:
-                    session.generate_reply(user_input=hint)
+                    session.generate_reply(instructions=hint)
                 publish_data({
                     "type": "roxstar.user_state",
                     "profile": tracker.profile.to_dict(),
@@ -628,7 +771,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         "reason": excuse,
                     })
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             f"[CRITICAL: User has declined/deflected action {tracker.action_nudge_count} times! "
                             f"YOUR VERY NEXT TURN MUST BE YOUR EXIT EXCUSE. Keep it strictly under 25 words! "
                             f"DO NOT ASK ANY QUESTION! DO NOT CONTINUE SMALL TALK! "
@@ -638,7 +781,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     )
                 else:
                     session.generate_reply(
-                        user_input=(
+                        instructions=(
                             "The user hesitated or declined the duet suggestion. Deliver Encouragement Attempt 2 gently in natural Hindi: "
                             "tell them they can sing and post their favourite song whenever they feel like it, and promise "
                             "you will wait for their song, listen to it, and comment on it "
@@ -665,16 +808,97 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception as e:
             logger.warning("Error processing received data: %s", e)
 
+    # Cleanup is registered BEFORE the session starts, so a failure anywhere below still closes the Gemini
+    # session and flushes the conversation log (it used to be registered at the very end, so an early failure
+    # left both open and costing money). The tasks are filled in as they are created.
+    watcher_task: asyncio.Task[None] | None = None
+    max_session_task: asyncio.Task[None] | None = None
+    greeting_task: asyncio.Task[None] | None = None
+    shutdown_state = {"done": False}
+
+    async def on_shutdown() -> None:
+        if shutdown_state["done"]:
+            return  # safe to call twice (a failed start calls it, and LiveKit may call it again)
+        shutdown_state["done"] = True
+        for task in (watcher_task, max_session_task, greeting_task):
+            if task is not None:
+                task.cancel()
+        # Each step is guarded, so one failing close can never skip the rest (above all the log flush).
+        for label, close in (("session", session.aclose), ("realtime model", realtime_model.aclose)):
+            try:
+                await close()
+            except Exception as exc:
+                logger.warning("Could not close %s on shutdown: %s", label, exc)
+        # Flush the conversation log last, after the voice session is already closed.
+        try:
+            await recorder.close(default_reason="user_disconnected", timeout=8.0)
+        except Exception as exc:
+            logger.warning("Conversation recorder close failed: %s", exc)
+
+    ctx.add_shutdown_callback(on_shutdown)
+
     logger.info("Starting AgentSession in room (sync_transcription=False for zero audio stutter)...")
-    await session.start(
-        agent,
-        room=ctx.room,
-        room_output_options=RoomOutputOptions(
-            sync_transcription=False,
-            audio_sample_rate=24000,
-        ),
-    )
+    try:
+        await session.start(
+            agent,
+            room=ctx.room,
+            # By default the session CLOSES the moment the user leaves, which left a dead Simran in the
+            # room that the next visit was sent to. Keep it open: we end the job ourselves after a short
+            # grace time (see leave_if_user_stays_away), and a quick return is re-linked.
+            room_input_options=RoomInputOptions(close_on_disconnect=False),
+            room_output_options=RoomOutputOptions(
+                sync_transcription=False,
+                audio_sample_rate=24000,
+            ),
+        )
+    except Exception:
+        logger.exception("AgentSession failed to start in room %s; cleaning up", ctx.room.name)
+        await on_shutdown()
+        raise
     logger.info("Simran STS AgentSession active in room %s", ctx.room.name)
+
+    # --- The user leaves and comes back -------------------------------------------------------
+    # Before: after the user left, this Simran stayed in the room for up to ~75 s. If the user reopened
+    # Simran in that time they were sent back to THIS Simran, who was still tied to their old
+    # connection (a new join has a new identity), so she never answered them.
+    LEFT_GRACE_SEC = 10.0
+
+    async def leave_if_user_stays_away() -> None:
+        await asyncio.sleep(LEFT_GRACE_SEC)
+        if not has_humans():
+            logger.info("User left room %s and did not return, shutting down job", ctx.room.name)
+            ctx.shutdown(reason="user_left")
+
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(p: rtc.RemoteParticipant) -> None:
+        if is_human_participant(p) and not has_humans():
+            task = asyncio.create_task(leave_if_user_stays_away())
+            background_tasks.add(task)
+            task.add_done_callback(background_tasks.discard)
+
+    @ctx.room.on("participant_connected")
+    def on_user_returned(p: rtc.RemoteParticipant) -> None:
+        """A user came back quickly (within the grace time): hear them, instead of the old connection."""
+        if not is_human_participant(p) or not has_greeted:
+            return
+        try:
+            linked = session.room_io.linked_participant
+            if linked is not None and linked.identity == p.identity:
+                return
+            if linked is not None and linked.identity in ctx.room.remote_participants:
+                return  # the first user is still here (a second device or tab): do not steal Simran
+            session.room_io.set_participant(p.identity)
+            logger.info("User %s is back in room %s: Simran now listens to them", p.identity, ctx.room.name)
+            if not sign_off_state["in_progress"] and not sign_off_state["turned_off"]:
+                session.generate_reply(
+                    instructions=(
+                        "The user dropped off for a moment and is back. Say ONE very short, natural line "
+                        "(under 8 words, 'aap'), like you noticed them return, and carry on where you left off. "
+                        "Do not restart the conversation and do not re-introduce yourself."
+                    )
+                )
+        except Exception as exc:
+            logger.warning("Could not re-link Simran to the returning user: %s", exc)
 
     # Initial state sync to frontend
     publish_data({
@@ -686,38 +910,79 @@ async def entrypoint(ctx: JobContext) -> None:
     # Trigger opening line natively for a visitor with minimum latency
     async def send_greeting() -> None:
         nonlocal has_greeted
-        await asyncio.sleep(0.08)  # minimal 80ms buffer for initial WebRTC track link
+        # Wait up to 3.0s for the Realtime session to reach listening/idle state and WebSocket handshake to complete
+        for _ in range(15):
+            await asyncio.sleep(0.2)
+            if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
+                return
+            if getattr(session, "agent_state", None) in ("listening", "idle"):
+                break
+
         if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
             return
+
+        # Do not greet an empty room. With the early start Simran can be ready before the user joins.
+        # Wait for them; if nobody comes in time, leave (an empty room only costs money).
+        arrival_timeout = float(settings.prewarm_idle_sec) if settings.prewarm_enabled else 60.0
+        if not human_arrived.is_set():
+            try:
+                await asyncio.wait_for(human_arrived.wait(), timeout=arrival_timeout)
+            except asyncio.TimeoutError:
+                logger.info("Nobody joined room %s within %.0fs, shutting down job", ctx.room.name, arrival_timeout)
+                ctx.shutdown(reason="no_user_arrived")
+                return
+            # We saw them (not just a heads-up): give their phone a moment to subscribe to Simran's
+            # audio so the first word is not clipped. After a heads-up no pause is needed, because
+            # making the first line takes about as long as the user needs to connect.
+            if not user_signalled:
+                await asyncio.sleep(0.5)
+            if has_greeted or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
+                return
+
         has_greeted = True
-        try:
-            if tracker.profile.is_returning and tracker.profile.name:
-                logger.info("Triggering personalized warm welcome for returning user: %s", tracker.profile.name)
-                session.generate_reply(
-                    user_input=(
-                        f"User '{tracker.profile.name}' is a returning friend. Greet them warmly by first name, glad they are back, bright but easy (not over the top), "
-                        "and ask one light thing, like which song has been on loop lately, in your own words. Do not recite a script and do not re-introduce yourself. "
-                        "(IMPORTANT: pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
+
+        def fire_greeting() -> bool:
+            try:
+                if tracker.profile.is_returning and tracker.profile.name:
+                    logger.info("Triggering personalized warm welcome for returning user: %s", tracker.profile.name)
+                    session.generate_reply(
+                        instructions=(
+                            f"User '{defang(tracker.profile.name, 40).replace(chr(39), chr(8217))}' is a returning friend. Greet them warmly by first name, glad they are back, bright but easy (not over the top), "
+                            "and ask one light thing, like which song has been on loop lately, in your own words. Do not recite a script and do not re-introduce yourself. "
+                            "(IMPORTANT: pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
+                        )
                     )
-                )
-            else:
-                logger.info("Triggering signature opening line for new visitor (asking user name first)")
-                session.generate_reply(
-                    user_input=(
-                        "Greet them with a warm, bright, easy tone (a smile in your voice, not a shout). "
-                        "Pick ONE of your opening angles and say it in your own words, then ask the user's name, like 'Hey! Ek aur singer aa gaya lagta hai. Naam kya hai aapka?' "
-                        "(CRITICAL: DO NOT say your name 'Simran' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
+                else:
+                    logger.info("Triggering signature opening line for new visitor (asking user name first)")
+                    session.generate_reply(
+                        instructions=(
+                            "Greet them with a warm, bright, easy tone (a smile in your voice, not a shout). "
+                            "Pick ONE of your opening angles and say it in your own words, then ask the user's name, like 'Hey! Ek aur singer aa gaya lagta hai. Naam kya hai aapka?' "
+                            "(CRITICAL: DO NOT say your name 'Simran' in this opening greeting. Ask the user's name first. Pronounce 'Main' naturally as Hindi मैं / mein, NEVER as English word 'may')"
+                        )
                     )
-                )
-        except Exception as exc:
-            logger.warning("Greeting via generate_reply failed: %s", exc)
+                return True
+            except Exception as exc:
+                logger.warning("Greeting via generate_reply failed: %s", exc)
+                return False
+
+        if not fire_greeting():
+            has_greeted = False
+            return
+
+        # Safety net: now and then Gemini never answers the very first request ("generate_reply timed
+        # out waiting for generation_created"), and the user would sit in silence for 15-20 s.
+        # If she has not started speaking after ~6.5 s, ask once more.
+        for _ in range(26):
+            await asyncio.sleep(0.25)
+            if speaking_seen["v"] or sign_off_state["in_progress"] or sign_off_state["turned_off"]:
+                return
+        logger.warning("Simran had not started speaking 6.5 s after the greeting request; asking once more")
+        fire_greeting()
 
     greeting_task = asyncio.create_task(send_greeting())
     background_tasks.add(greeting_task)
     greeting_task.add_done_callback(background_tasks.discard)
-
-    def has_humans() -> bool:
-        return any(is_human_participant(p) for p in ctx.room.remote_participants.values())
 
     async def auto_disconnect_watcher() -> None:
         await asyncio.sleep(60.0)
@@ -730,18 +995,45 @@ async def entrypoint(ctx: JobContext) -> None:
 
     watcher_task = asyncio.create_task(auto_disconnect_watcher())
 
-    async def on_shutdown() -> None:
-        watcher_task.cancel()
-        greeting_task.cancel()
-        await session.aclose()
-        await realtime_model.aclose()
-        # Flush the conversation log last, after the voice session is already closed.
-        try:
-            await recorder.close(default_reason="user_disconnected", timeout=8.0)
-        except Exception as exc:
-            logger.warning("Conversation recorder close failed: %s", exc)
+    async def max_session_watcher() -> None:
+        """Cost cap: no single conversation may run forever (every minute costs Gemini + LiveKit money).
 
-    ctx.add_shutdown_callback(on_shutdown)
+        At STS_MAX_SESSION_SEC (default 8 min) Simran wraps up warmly, like her normal exit.
+        If she somehow has not powered off 60 s later, we switch her off by force.
+        """
+        limit = settings.max_session_sec
+        if limit <= 0:
+            return  # 0 = no limit (lab default behaviour is unchanged unless configured)
+        await asyncio.sleep(limit)
+        already_leaving = sign_off_state["in_progress"] or sign_off_state["turned_off"] or tracker.is_simran_away
+        if not already_leaving:
+            logger.info("Session time limit (%ss) reached: Simran is wrapping up", limit)
+            excuse = tracker.get_random_excuse()
+            recorder.mark_exit("time_limit_exit")
+            tracker.mark_simran_away(excuse)
+            sign_off_state["in_progress"] = True
+            sign_off_state["speech_started"] = False
+            sign_off_state["reason"] = excuse
+            publish_data({"type": "roxstar.stage_transferred", "reason": excuse})
+            try:
+                session.generate_reply(
+                    instructions=(
+                        "[SYSTEM ALERT - CRITICAL: Time for this chat is up. YOUR VERY NEXT TURN MUST BE YOUR EXIT. "
+                        "Keep it strictly under 25 words! DO NOT ASK ANY QUESTION! "
+                        f"Wrap up warmly using this natural excuse: '{excuse}', say goodbye, and exit! "
+                        "The bot will power off right after this turn.]"
+                    )
+                )
+            except Exception as exc:
+                logger.warning("Time-limit wrap-up reply failed: %s", exc)
+        # Safety net: whether or not she managed to speak, she must be gone one minute later.
+        await asyncio.sleep(60.0)
+        if not sign_off_state["turned_off"]:
+            sign_off_state["turned_off"] = True
+            sign_off_state["in_progress"] = False
+            await turn_off_bot("time_limit_exit")
+
+    max_session_task = asyncio.create_task(max_session_watcher())
 
 
 def main() -> None:
@@ -752,7 +1044,7 @@ def main() -> None:
             entrypoint_fnc=entrypoint,
             prewarm_fnc=prewarm,
             agent_name=settings.agent_name,
-            num_idle_processes=1,
+            num_idle_processes=2,
             load_threshold=float("inf"),
             job_executor_type=JobExecutorType.THREAD,
             initialize_process_timeout=60.0,

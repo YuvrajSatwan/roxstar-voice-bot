@@ -18,6 +18,7 @@ EXIT_REASONS = (
     "duet_handoff",
     "solo_handoff",
     "two_decline_exit",
+    "time_limit_exit",
     "user_disconnected",
     "abandoned",
 )

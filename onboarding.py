@@ -21,6 +21,7 @@ import logging
 import os
 import time
 from dataclasses import asdict, dataclass, field
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -220,12 +221,87 @@ class DuetRoom:
     host_name: str
     song_title: str
     singers_count: int = 1
+    # Set when this "room" is really a RoxStar duet POST (the app opens the post, not a party room).
+    post_id: str = ""
+
+
+def featured_duet_pitch(room: DuetRoom) -> str:
+    """What check_available_duets tells Simran when there is exactly one featured duet.
+
+    The Phase 4 flow in the prompt is unchanged: she pitches it, the USER answers, and only a clear yes
+    makes her call navigate_to_duet. Hesitation and declines follow the prompt (reassure, solo, exit).
+    """
+    return (
+        f"Available live duet: {room.host_name} is live singing '{room.song_title}' (Room ID: {room.room_id}). "
+        f"It is the only one, so do NOT offer a choice of rooms. "
+        f"INSTRUCTION: Casually ask, in your own words, whether they would like to jam with {room.host_name} on "
+        f"'{room.song_title}'. Use only that exact host name and song title. "
+        f"Do NOT call navigate_to_duet yet: wait for the user's answer. "
+        f"If they clearly agree, call navigate_to_duet('{room.room_id}') immediately and hand off. "
+        f"If they hesitate or say no, follow your normal Phase 4 steps (reassure, then solo recording, then exit)."
+    )
+
+
+class DuetConsentGate:
+    """Code-level "the user must agree first" check for the featured duet handoff.
+
+    In simple words: the prompt already tells Simran to redirect only after a clear yes. This makes it a
+    hard rule too. She may only redirect if (1) she has pitched the duet and (2) the user has said
+    something since. Whether that something is a yes stays with the model; this stops a redirect
+    that happens before the user was ever asked or got a chance to answer.
+    """
+
+    def __init__(self) -> None:
+        self.pitched = False
+        self.replies_since_pitch = 0
+
+    def mark_pitched(self) -> None:
+        """The duet was offered to the user. Their answer must come AFTER this."""
+        self.pitched = True
+        self.replies_since_pitch = 0
+
+    def note_user_speech(self) -> None:
+        """The user spoke (any transcript of their voice). Counts only once the duet was pitched."""
+        if self.pitched:
+            self.replies_since_pitch += 1
+
+    def user_has_answered(self) -> bool:
+        return self.pitched and self.replies_since_pitch > 0
 
 
 class DuetRoomRegistry:
     """Registry of live duet rooms so Simran only suggests REAL available rooms."""
 
-    def __init__(self, initial_rooms: list[DuetRoom] | None = None) -> None:
+    # How long a fetched list is trusted. A short wait after an EMPTY answer lets Simran notice quickly
+    # when rooms come back; a longer wait after a good answer keeps rox-partyroom from being hammered.
+    CACHE_TTL_SEC = 60.0
+    EMPTY_CACHE_TTL_SEC = 10.0
+
+    def __init__(
+        self,
+        initial_rooms: list[DuetRoom] | None = None,
+        *,
+        fetcher: Callable[[], list[dict[str, str]]] | None = None,
+        strict: bool = False,
+        clock: Callable[[], float] = time.monotonic,
+        featured: DuetRoom | None = None,
+    ) -> None:
+        """
+        fetcher: asks the real RoxStar backend for live rooms (see rox_services.fetch_active_duets).
+        strict:  production safety mode. Simran may ONLY use rooms the backend really returned.
+                 - starts with NO rooms (no mock data)
+                 - get_room() accepts an exact room id only (no fuzzy guessing, no "first room" fallback)
+        With the defaults (no fetcher, not strict) behaviour is the same as the original lab.
+        """
+        self._fetcher = fetcher
+        self.strict = strict
+        self._clock = clock
+        # Optional single "featured" destination (the final duet post). When set it is the ONLY option
+        # Simran offers: no choice, no live-list lookup. None = behaviour unchanged.
+        self.featured = featured
+        self._fetched_at: float | None = None
+        if strict and initial_rooms is None:
+            initial_rooms = []
         if initial_rooms is not None:
             self._rooms: dict[str, DuetRoom] = {r.room_id: r for r in initial_rooms}
         else:
@@ -273,6 +349,8 @@ class DuetRoomRegistry:
             }
 
     def list_available(self, genre: str | None = None) -> list[DuetRoom]:
+        if self.featured is not None:
+            return [self.featured]
         rooms = list(self._rooms.values())
         if not genre:
             return rooms
@@ -280,9 +358,49 @@ class DuetRoomRegistry:
         matched = [r for r in rooms if g_clean in r.genre.lower() or g_clean in r.title.lower()]
         return matched if matched else rooms
 
+    def refresh(self) -> None:
+        """Re-read the live room list from the backend if our copy is old. BLOCKING (up to ~2 s).
+
+        From async code call it as:  await asyncio.to_thread(registry.refresh)
+        If the backend is down or has no rooms, the list becomes empty and Simran offers solo recording.
+        It never raises.
+        """
+        if self._fetcher is None or self.featured is not None:
+            return
+        now = self._clock()
+        if self._fetched_at is not None:
+            ttl = self.CACHE_TTL_SEC if self._rooms else self.EMPTY_CACHE_TTL_SEC
+            if now - self._fetched_at < ttl:
+                return
+        try:
+            items = self._fetcher()
+        except Exception as exc:  # a broken fetcher must not break the conversation
+            logger.warning("Duet fetcher failed (%s); treating as no live rooms", type(exc).__name__)
+            items = []
+        rooms: dict[str, DuetRoom] = {}
+        for item in items:
+            rid = str(item.get("room_id", "")).strip()
+            if not rid:
+                continue
+            rooms[rid] = DuetRoom(
+                room_id=rid,
+                title=item.get("title") or "a live duet",
+                genre=item.get("genre") or "Music",
+                host_name=item.get("host_name") or "the host",
+                song_title=item.get("song_title") or item.get("title") or "a duet",
+                singers_count=1,
+            )
+        self._rooms = rooms
+        self._fetched_at = now
+
     def get_room(self, room_id: str) -> DuetRoom | None:
+        if self.featured is not None:
+            return self.featured  # the only destination there is, whatever id the model passes
         if room_id in self._rooms:
             return self._rooms[room_id]
+        if self.strict:
+            # Production: an id that is not in the live list does not exist. Never guess, never substitute.
+            return None
         rid_lower = room_id.strip().lower()
         for r in self._rooms.values():
             if (

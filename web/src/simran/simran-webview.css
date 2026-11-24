@@ -1,0 +1,843 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   ROXSTAR LIVE PARTY ROOM — SIMRAN HOST STAGE (100% SCREENSHOT REPLICA)
+   Exact match to RoxStar production live room activity_chat_room_new.xml
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.roxstar-room-container,
+.roxstar-room-container * {
+  box-sizing: border-box;
+}
+
+.roxstar-room-container {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #ffffff;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #170b28;
+  background-image: url('/ic_chat_bg.jpg');
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  user-select: none;
+  -webkit-user-select: none;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── TOP ROOM HEADER ── */
+.roxstar-room-header {
+  height: 110px;
+  min-height: 110px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 12px 0 12px;
+  z-index: 20;
+}
+
+/* Left Column */
+.header-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.header-user-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 3px 12px 3px 6px;
+  gap: 7px;
+  max-width: fit-content;
+}
+
+.header-user-gem {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-username {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.15;
+}
+
+.header-userid {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* Sub-row under username */
+.header-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.music-circle-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.star-capsule-pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(233, 53, 101, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.star-icon-gold {
+  fill: #fbbf24;
+  color: #fbbf24;
+}
+
+.star-count-num {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.star-arrow-icon {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Chest Badges Column */
+.header-chests-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.chest-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 2px 8px 2px 2px;
+  max-width: fit-content;
+}
+
+.chest-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.chest-num {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* Right Column */
+.header-right-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.header-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.action-viewers-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.eye-icon-white {
+  color: #ffffff;
+}
+
+.viewers-count-num {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.action-circle-icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.action-circle-icon-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.action-leave-btn {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Today's Exp */
+.todays-exp-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  width: 115px;
+}
+
+.exp-labels-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.exp-title {
+  font-weight: 700;
+}
+
+.exp-ratio {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.exp-track-line {
+  width: 100%;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.exp-fill-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #00e5ff 0%, #00b0ff 100%);
+  border-radius: 2px;
+}
+
+/* ── STAGE CONTAINER (Host + 8 Guest Seats) ── */
+.roxstar-stage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 4px 12px;
+  z-index: 10;
+}
+
+/* Host Seat (Centered top in radial rings) */
+.stage-host-seat-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: -6px;
+  margin-bottom: 20px;
+}
+
+.host-seat-circle-container {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.host-avatar-circle {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+  background: #1e1138;
+  z-index: 2;
+}
+
+.host-avatar-img {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.host-fallback-initial {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ec4899 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.host-mic-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 1.5px solid #170b28;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 4;
+}
+
+/* DuetSpeakingIndicatorView Pulse behind Host Avatar */
+.speaking-ripple-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  margin-top: -32px;
+  margin-left: -32px;
+  pointer-events: none;
+  transition: transform 0.12s ease-out;
+}
+
+.ripple-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  opacity: 0;
+}
+
+.speaking-ripple-container--active .ring-1 {
+  border-color: rgba(245, 158, 11, 0.85);
+  animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.speaking-ripple-container--active .ring-2 {
+  border-color: rgba(236, 72, 153, 0.7);
+  animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) 0.4s infinite;
+}
+
+.speaking-ripple-container--active .ring-3 {
+  border-color: rgba(245, 158, 11, 0.5);
+  animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) 0.8s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+
+/* 8 Guest Seats Grid (2 rows of 4) */
+.stage-guest-seats-grid {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guest-seats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.guest-seat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 52px;
+}
+
+.guest-seat-circle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(85, 30, 110, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.guest-seat-circle--empty {
+  color: #e6e6e6;
+}
+
+/* User Seat (No.1) */
+.guest-seat-circle--user {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  border: 1.5px solid #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.user-seat-avatar {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.user-seat-mic {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #170b28;
+  color: #ffffff;
+}
+
+.user-seat-mic--active {
+  background: #10b981;
+}
+
+.user-seat-mic--muted {
+  background: #ef4444;
+}
+
+/* Labels below each seat */
+.seat-label-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.host-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* ── LOWER-THIRD NOTICES & LIVE CONVERSATION STREAM ── */
+.roxstar-notices-feed {
+  flex: 1;
+  width: 100%;
+  margin: 10px 12px 6px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  z-index: 10;
+}
+
+.roxstar-notices-feed::-webkit-scrollbar {
+  display: none;
+}
+
+/* Pink Megaphone Notice Bubbles (Exact row_item_chat_user.xml) */
+.notice-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 95%;
+  align-self: flex-start;
+}
+
+.notice-pink-circle {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  background: #ff2e74;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 46, 116, 0.4);
+}
+
+.megaphone-white {
+  color: #ffffff;
+}
+
+.notice-bubble-pill {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  color: #ffffff;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Live Speech Transcripts in the same stream */
+.live-chat-bubble-row {
+  max-width: 92%;
+  align-self: flex-start;
+  margin-left: 31px;
+}
+
+.chat-bubble-content {
+  background: rgba(18, 9, 30, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.chat-bubble--simran {
+  border-left: 3px solid #fbbf24;
+}
+
+.chat-bubble--user {
+  border-left: 3px solid #00e5ff;
+}
+
+.chat-speaker-name {
+  font-weight: 700;
+  margin-right: 5px;
+}
+
+.chat-bubble--simran .chat-speaker-name {
+  color: #fbbf24;
+}
+
+.chat-bubble--user .chat-speaker-name {
+  color: #38bdf8;
+}
+
+.chat-speaker-text {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── GIFT REWARD CELEBRATION TOAST ── */
+.gift-celebration-toast {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #78350f 0%, #451a03 100%);
+  border: 1.5px solid #f59e0b;
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+  z-index: 50;
+  animation: toast-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes toast-pop {
+  0% { opacity: 0; transform: translate(-50%, 15px) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.gift-toast-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.gift-toast-text strong {
+  color: #fde68a;
+  font-size: 13px;
+}
+
+.gift-toast-text span {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── BOTTOM CONTROL BAR (Exact RoxStar 1:1 Layout) ── */
+.roxstar-bottom-bar {
+  height: 58px;
+  min-height: 58px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 8px 10px;
+  background: transparent;
+  gap: 8px;
+  z-index: 20;
+}
+
+/* "Let's talk" Input Pill */
+.bottom-pill-input-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  height: 38px;
+  padding: 0 8px 0 14px;
+}
+
+.bottom-pill-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.bottom-pill-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.bottom-pill-send-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 0;
+  background: #ff2e74;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 4 Circular Action Buttons */
+.bottom-action-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.bottom-round-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.bottom-round-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.bottom-round-btn--muted {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.bottom-gift-btn {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── CONNECTING BANNER ── */
+.roxstar-connecting-banner {
+  position: absolute;
+  top: 114px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 5px 12px;
+  border-radius: 18px;
+  font-size: 11px;
+  color: #fff;
+  z-index: 30;
+  white-space: nowrap;
+}
+
+.connecting-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: pulse-dot 1s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ── MODAL SCRIM & CARD ── */
+.roxstar-modal-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.roxstar-modal-card {
+  width: min(100%, 320px);
+  background: #1e1138;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.roxstar-modal-card h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.roxstar-modal-card p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.4;
+}
+
+.modal-action-btn {
+  margin-top: 10px;
+  height: 42px;
+  border-radius: 21px;
+  border: 0;
+  background: linear-gradient(135deg, #ff2e74 0%, #7c3aed 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+
+/* Welcome coins claim popup: shown only when Simran mentions the coins, gone after Claim. */
+.coins-claim-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.coins-claim-card {
+  width: min(300px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 20px;
+  border-radius: 20px;
+  background: #1c1530;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.coins-claim-amount {
+  font-size: 44px;
+  font-weight: 800;
+  color: #ffc83d;
+  line-height: 1.1;
+}
+.coins-claim-title {
+  font-size: 18px;
+}
+.coins-claim-sub {
+  font-size: 13px;
+  opacity: 0.75;
+}
+.coins-claim-btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff4d8d, #ff7a45);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}

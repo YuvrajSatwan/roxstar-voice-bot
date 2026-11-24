@@ -74,11 +74,16 @@ export function useStsRoom() {
   const [userProfile, setUserProfile] = useState<UserDiscoveryProfile | null>(null);
   const [discoveredTopics, setDiscoveredTopics] = useState<string[]>([]);
   const [navigatedDuetRoom, setNavigatedDuetRoom] = useState<string | null>(null);
+  /** Set when the duet is a RoxStar post (not a party room): the app opens that post. */
+  const [navigatedDuetPostId, setNavigatedDuetPostId] = useState<string | null>(null);
   const [navigatedSoloRecording, setNavigatedSoloRecording] = useState<string | null>(null);
 
   // Pillar 2 & 3: Simran stage handover and coins reward states
   const [isSimranAway, setIsSimranAway] = useState(false);
   const [simranAwayReason, setSimranAwayReason] = useState<string | null>(null);
+  // True once Simran has fully powered off (her last words are finished). The WebView page waits for this
+  // before closing, so the user never gets cut off mid-sentence.
+  const [botTurnedOff, setBotTurnedOff] = useState(false);
   const [coinBalance, setCoinBalance] = useState(0);
   const [coinsAwardedEvent, setCoinsAwardedEvent] = useState<CoinsAwardedEvent | null>(null);
   const [laughEnabled, setLaughEnabled] = useState<boolean>(() => {
@@ -93,12 +98,14 @@ export function useStsRoom() {
   const analyserCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const hasTriggeredVoiceCoinsRef = useRef(false);
+  const isConnectingRef = useRef(false);
 
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
 
   // Cleanup room and audio listeners
   const cleanup = useCallback(async () => {
+    isConnectingRef.current = false;
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -119,11 +126,22 @@ export function useStsRoom() {
       await roomRef.current.disconnect();
       roomRef.current = null;
     }
+    // Remove any lingering attached audio elements to prevent duplicate audio streams
+    if (typeof document !== 'undefined') {
+      document.querySelectorAll('audio').forEach((el) => {
+        try {
+          el.pause();
+          el.srcObject = null;
+          el.remove();
+        } catch {}
+      });
+    }
     setConnectionState(ConnectionState.Disconnected);
     setSimranState('idle');
     setAudioLevel(0);
     setIsSimranAway(false);
     setSimranAwayReason(null);
+    setBotTurnedOff(false);
     setCoinsAwardedEvent(null);
     hasTriggeredVoiceCoinsRef.current = false;
     setNavigatedDuetRoom(null);
@@ -132,6 +150,11 @@ export function useStsRoom() {
 
   const connect = useCallback(
     async (userName: string, targetRoom?: string) => {
+      if (isConnectingRef.current || roomRef.current?.state === ConnectionState.Connected) {
+        console.warn('Simran voice session already connecting or active, skipping duplicate connect');
+        return;
+      }
+      isConnectingRef.current = true;
       setError(null);
       await cleanup();
 
@@ -230,6 +253,7 @@ export function useStsRoom() {
               }
             } else if (msg.type === 'roxstar.bot_turned_off') {
               console.log('Bot turned off, onboarding complete:', msg.reason);
+              setBotTurnedOff(true);
               setSimranState('idle');
               setIsSimranAway(true);
               if (msg.reason) {
@@ -251,6 +275,7 @@ export function useStsRoom() {
               }
             } else if (msg.type === 'roxstar.duet_navigation') {
               console.log('Duet navigation triggered by Simran:', msg.room_id);
+              setNavigatedDuetPostId(msg.post_id ? String(msg.post_id) : null);
               setNavigatedDuetRoom(msg.room_id || 'duet-active');
             } else if (msg.type === 'roxstar.solo_recording_navigation') {
               console.log('Solo recording navigation triggered by Simran:', msg.song_title);
@@ -362,6 +387,8 @@ export function useStsRoom() {
         const msg = err instanceof Error ? err.message : 'Failed to join STS room.';
         setError(msg);
         setConnectionState(ConnectionState.Disconnected);
+      } finally {
+        isConnectingRef.current = false;
       }
     },
     [cleanup],
@@ -516,12 +543,14 @@ export function useStsRoom() {
     userProfile,
     discoveredTopics,
     navigatedDuetRoom,
+    navigatedDuetPostId,
     clearDuetNavigation,
     navigatedSoloRecording,
     clearSoloNavigation,
     isSimranAway,
     isSaaraAway: isSimranAway,
     simranAwayReason,
+    botTurnedOff,
     saaraAwayReason: simranAwayReason,
     coinBalance,
     coinsAwardedEvent,

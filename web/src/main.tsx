@@ -9,24 +9,15 @@ const AdminApp = lazy(() => import('./admin/AdminApp').then((m) => ({ default: m
 const SimranWebViewPage = lazy(() =>
   import('./simran/SimranWebViewPage').then((m) => ({ default: m.SimranWebViewPage })),
 );
-// End-to-end RoxStar mobile user onboarding journey simulator
-const RoxStarUserFlowSimulator = lazy(() =>
-  import('./workflow/RoxStarUserFlowSimulator').then((m) => ({ default: m.RoxStarUserFlowSimulator })),
-);
 
 const path = window.location.pathname.replace(/\/+$/, '');
 const isAdminRoute = path.startsWith('/admin');
 const isStudioRoute = path === '/studio';
-const isSimulatorRoute = path === '/simulator';
 const isSimranRoute = path === '' || path === '/simran';
 
 const pageContent = isAdminRoute ? (
   <Suspense fallback={null}>
     <AdminApp />
-  </Suspense>
-) : isSimulatorRoute ? (
-  <Suspense fallback={null}>
-    <RoxStarUserFlowSimulator />
   </Suspense>
 ) : isStudioRoute ? (
   <App />
@@ -37,7 +28,7 @@ const pageContent = isAdminRoute ? (
 );
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  isAdminRoute || isSimulatorRoute || isStudioRoute ? (
+  isAdminRoute || isStudioRoute ? (
     <React.StrictMode>{pageContent}</React.StrictMode>
   ) : (
     pageContent
